@@ -7,7 +7,6 @@ import { WeatherCard } from '@/components/dashboard/WeatherCard';
 import { PredictionsCard } from '@/components/dashboard/PredictionsCard';
 import { ActivityFeed } from '@/components/activityFeed/ActivityFeed';
 import { QuickActions } from '@/components/dashboard/QuickActions';
-import { VineyardChatbot } from '@/components/dashboard/VineyardChatbot';
 import { 
   currentSeason, 
   pastSeason, 
@@ -133,25 +132,22 @@ const Index = () => {
           />
         </div>
 
-        {/* GDD Chart and Phases section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
-            <GddChart 
-              currentSeason={currentSeason}
-              pastSeason={pastSeason}
-              onPhaseClick={handlePhaseClick}
-            />
-          </div>
-          <div>
-            <PhasesCard 
-              currentSeason={currentSeason}
-              pastSeason={pastSeason}
-            />
-          </div>
+        {/* GDD Chart takes full width at the top */}
+        <div>
+          <GddChart 
+            currentSeason={currentSeason}
+            pastSeason={pastSeason}
+            onPhaseClick={handlePhaseClick}
+          />
         </div>
 
-        {/* NEW: Vineyard Chatbot section */}
-        <VineyardChatbot />
+        {/* Growth Phases in a horizontal section */}
+        <div>
+          <PhasesCard 
+            currentSeason={currentSeason}
+            pastSeason={pastSeason}
+          />
+        </div>
 
         {/* Weather and Predictions section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -11,6 +11,7 @@ import Notes from "./pages/Notes";
 import Vineyard from "./pages/Vineyard";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import { BertinProvider } from "./components/bertin/BertinProvider";
 
 const queryClient = new QueryClient();
 
@@ -20,16 +21,18 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/blocks" element={<Blocks />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/notes" element={<Notes />} />
-          <Route path="/vineyard" element={<Vineyard />} />
-          <Route path="/settings" element={<Settings />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <BertinProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/blocks" element={<Blocks />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/notes" element={<Notes />} />
+            <Route path="/vineyard" element={<Vineyard />} />
+            <Route path="/settings" element={<Settings />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BertinProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
