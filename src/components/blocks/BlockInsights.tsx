@@ -13,6 +13,9 @@ interface BlockInsightsProps {
 export const BlockInsights: React.FC<BlockInsightsProps> = ({ blocks, activities }) => {
   // Calculate block statistics
   const blockStats = blocks.map(block => {
+    // Convert hectares to acres
+    const areaInAcres = (block.area * 2.47).toFixed(1);
+    
     // Get activities for this block in the last 30 days
     const recentActivities = activities.filter(activity => 
       activity.blockId === block.id && 
@@ -39,7 +42,7 @@ export const BlockInsights: React.FC<BlockInsightsProps> = ({ blocks, activities
     
     // Last year yield data (mock)
     const lastYieldTons = (block.area * 3.5 + Math.random()).toFixed(1);
-    const tonsPerAcre = (Number(lastYieldTons) / (block.area * 2.47)).toFixed(2); // Converting ha to acres
+    const tonsPerAcre = (Number(lastYieldTons) / Number(areaInAcres)).toFixed(2);
     
     return {
       id: block.id,
@@ -49,7 +52,8 @@ export const BlockInsights: React.FC<BlockInsightsProps> = ({ blocks, activities
       taskCount,
       noteCount,
       lastYieldTons,
-      tonsPerAcre
+      tonsPerAcre,
+      areaInAcres
     };
   });
 

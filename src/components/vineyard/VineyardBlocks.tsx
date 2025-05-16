@@ -15,9 +15,12 @@ import { Badge } from '@/components/ui/badge';
 export const VineyardBlocks: React.FC = () => {
   // Add yield data to each block
   const blocksWithYield = vineyardBlocks.map(block => {
+    // Convert hectares to acres
+    const areaInAcres = (block.area * 2.47).toFixed(1);
+    
     // Mock yield data
     const yieldTons = (block.area * 3.5 + Math.random()).toFixed(1);
-    const tonsPerAcre = (Number(yieldTons) / (block.area * 2.47)).toFixed(2);
+    const tonsPerAcre = (Number(yieldTons) / Number(areaInAcres)).toFixed(2);
     
     // Determined soil type by block ID (for demonstration)
     const soilTypes = ['Volcanic', 'Clay Loam', 'Sandy Loam', 'Limestone', 'Alluvial'];
@@ -37,6 +40,7 @@ export const VineyardBlocks: React.FC = () => {
     
     return {
       ...block,
+      areaInAcres,
       yieldTons,
       tonsPerAcre,
       soilType,
@@ -84,7 +88,7 @@ export const VineyardBlocks: React.FC = () => {
                   {block.clone}
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
-                  {block.area.toFixed(1)} ha
+                  {block.areaInAcres} acres
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">
                   {block.soilType}

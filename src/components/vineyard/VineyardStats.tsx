@@ -6,6 +6,7 @@ import { vineyardBlocks } from '@/data/mockData';
 export const VineyardStats: React.FC = () => {
   // Calculate total area
   const totalArea = vineyardBlocks.reduce((sum, block) => sum + block.area, 0);
+  const totalAreaInAcres = (totalArea * 2.47).toFixed(1);
   
   // Calculate area by variety
   const areaByVariety = vineyardBlocks.reduce<Record<string, number>>((acc, block) => {
@@ -25,12 +26,13 @@ export const VineyardStats: React.FC = () => {
   const varietyPercentages = sortedVarieties.map(({ variety, area }) => ({
     variety,
     area,
+    areaInAcres: (area * 2.47).toFixed(1),
     percentage: (area / totalArea) * 100
   }));
   
   // Mock production data
   const totalProduction = Math.round(totalArea * 3.5); // 3.5 tons per hectare on average
-  const averageYield = (totalProduction / (totalArea * 2.47)).toFixed(2); // hectares to acres
+  const averageYield = (totalProduction / Number(totalAreaInAcres)).toFixed(2); // Using acres now
   
   return (
     <Card className="h-full">
@@ -43,11 +45,11 @@ export const VineyardStats: React.FC = () => {
             <div className="bg-muted rounded-lg p-4">
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Total Area</h3>
               <div className="flex items-end">
-                <span className="text-2xl font-bold">{totalArea.toFixed(1)}</span>
-                <span className="text-muted-foreground ml-1">hectares</span>
+                <span className="text-2xl font-bold">{totalAreaInAcres}</span>
+                <span className="text-muted-foreground ml-1">acres</span>
               </div>
               <span className="text-sm text-muted-foreground">
-                {(totalArea * 2.47).toFixed(1)} acres
+                {totalArea.toFixed(1)} hectares
               </span>
             </div>
             
@@ -87,11 +89,11 @@ export const VineyardStats: React.FC = () => {
           <div>
             <h3 className="text-sm font-medium mb-4">Variety Distribution</h3>
             <div className="space-y-3">
-              {varietyPercentages.map(({ variety, area, percentage }) => (
+              {varietyPercentages.map(({ variety, area, areaInAcres, percentage }) => (
                 <div key={variety}>
                   <div className="flex justify-between text-sm mb-1">
                     <span>{variety}</span>
-                    <span>{area.toFixed(1)} ha ({percentage.toFixed(1)}%)</span>
+                    <span>{areaInAcres} acres ({percentage.toFixed(1)}%)</span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                     <div 

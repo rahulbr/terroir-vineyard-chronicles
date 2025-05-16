@@ -40,7 +40,7 @@ export const BlockList: React.FC<BlockListProps> = ({ blocks }) => {
                   </div>
                 </div>
                 <Badge className="bg-vineyard-burgundy hover:bg-vineyard-burgundy/80">
-                  {block.area.toFixed(1)} ha
+                  {(block.area * 2.47).toFixed(1)} acres
                 </Badge>
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm">
