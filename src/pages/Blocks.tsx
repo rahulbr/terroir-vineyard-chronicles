@@ -3,7 +3,7 @@ import React from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { BlockList } from '@/components/blocks/BlockList';
 import { BlockInsights } from '@/components/blocks/BlockInsights';
-import { vineyardBlocks, activities } from '@/data/mockData';
+import { vineyardBlocks, activityItems } from '@/data/mockData';
 
 const Blocks = () => {
   return (
@@ -21,7 +21,7 @@ const Blocks = () => {
             <BlockList blocks={vineyardBlocks} />
           </div>
           <div>
-            <BlockInsights blocks={vineyardBlocks} activities={activities} />
+            <BlockInsights blocks={vineyardBlocks} activities={activityItems} />
           </div>
         </div>
       </div>

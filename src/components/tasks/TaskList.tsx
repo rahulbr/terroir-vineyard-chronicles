@@ -11,7 +11,7 @@ import {
   CheckCircle2, 
   Circle,
   Scissors,
-  Spray,
+  Droplets,
   Leaf,
   Tractor,
   Shovel,
@@ -55,7 +55,7 @@ const getCategoryIcon = (category: TaskItem['category']) => {
     case 'pruning':
       return <Scissors className="h-4 w-4" />;
     case 'spraying':
-      return <Spray className="h-4 w-4" />;
+      return <Droplets className="h-4 w-4" />;
     case 'leafing':
       return <Leaf className="h-4 w-4" />;
     case 'harvesting':
