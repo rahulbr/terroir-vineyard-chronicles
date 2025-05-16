@@ -149,13 +149,13 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
   // Custom tooltip to show both years and phenology stage if applicable
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      // Safely format the date - first check if it's a valid date string
+      // Format the date without the year as requested
       let formattedDate = "";
       try {
         // Ensure we're parsing a valid date
         const dateObj = new Date(label);
         if (isValid(dateObj)) {
-          formattedDate = format(dateObj, 'MMM d, yyyy');
+          formattedDate = format(dateObj, 'MMM d'); // Removed the year as requested
         } else {
           formattedDate = label; // Fallback to using the label as is
         }
@@ -195,7 +195,7 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
         <div>
           <CardTitle>Growth Curve</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Tracking vine development through heat accumulation
+            Tracking vine development to harvest
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -249,7 +249,7 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
                 name={`${pastSeason.year} Season`}
                 stroke="#9b87f5"
                 strokeWidth={2}
-                strokeDasharray="5 5"
+                strokeDasharray="0" // Changed to solid line (no dash array)
                 dot={false}
               />
             )}

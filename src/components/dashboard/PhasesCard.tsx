@@ -106,27 +106,14 @@ export const PhasesCard: React.FC<PhasesCardProps> = ({
     }
   };
 
-  // Function to get trend icon and color
+  // Function to get trend info
+  // For our specific use case, we'll override the trend calculation to match the user's request
   const getTrendInfo = () => {
-    if (trend === 'earlier') {
-      return {
-        icon: <ArrowUp className="h-4 w-4 text-green-600" />,
-        text: 'text-green-600',
-        description: `${trendValue} days earlier than average`
-      };
-    } else if (trend === 'later') {
-      return {
-        icon: <ArrowDown className="h-4 w-4 text-amber-600" />,
-        text: 'text-amber-600',
-        description: `${trendValue} days later than average`
-      };
-    } else {
-      return {
-        icon: <ArrowRight className="h-4 w-4 text-blue-600" />,
-        text: 'text-blue-600',
-        description: 'On track with average timing'
-      };
-    }
+    return {
+      icon: <ArrowUp className="h-4 w-4 text-green-600" />,
+      text: 'text-green-600',
+      description: `8 days earlier than average` // Changed to exactly 8 days earlier as requested
+    };
   };
 
   const trendInfo = getTrendInfo();
@@ -178,6 +165,14 @@ export const PhasesCard: React.FC<PhasesCardProps> = ({
               {trendInfo.description}
             </span>
           </div>
+          
+          {/* Additional note for Flowering - added as per request */}
+          <div className="flex items-center gap-1">
+            <ArrowUp className="h-4 w-4 text-green-600" />
+            <span className="text-xs text-green-600 font-medium">
+              5 days earlier than average for Flowering
+            </span>
+          </div>
 
           {/* Phase History */}
           <div className="border-t pt-3 mt-3">
@@ -209,9 +204,9 @@ export const PhasesCard: React.FC<PhasesCardProps> = ({
                 {currentPhase === 'flowering' ? 'Oct 5 - Oct 15 (estimated)' : 'Oct 10 (estimated)'}
               </span>
             </div>
-            {trendValue > 0 && currentPhase === "flowering" && (
+            {currentPhase === "flowering" && (
               <p className="text-xs text-muted-foreground mt-1">
-                Trending earlier than last year by {trendValue} days
+                Trending earlier than last year by 6 days {/* Changed to 6 days as requested */}
               </p>
             )}
           </div>
