@@ -23,11 +23,11 @@ export const NoteFilters: React.FC<NoteFiltersProps> = ({
   onFilterChange 
 }) => {
   const handleBlockChange = (value: string) => {
-    onFilterChange(value, selectedTag);
+    onFilterChange(value === "all" ? null : value, selectedTag);
   };
 
   const handleTagChange = (value: string) => {
-    onFilterChange(selectedBlock, value);
+    onFilterChange(selectedBlock, value === "all" ? null : value);
   };
 
   const handleClearFilters = () => {
@@ -41,14 +41,14 @@ export const NoteFilters: React.FC<NoteFiltersProps> = ({
           <div className="space-y-2">
             <Label htmlFor="block-filter">Filter by Block</Label>
             <Select
-              value={selectedBlock || ''}
+              value={selectedBlock || "all"}
               onValueChange={handleBlockChange}
             >
               <SelectTrigger id="block-filter">
                 <SelectValue placeholder="All Blocks" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Blocks</SelectItem>
+                <SelectItem value="all">All Blocks</SelectItem>
                 {blocks.map((block) => (
                   <SelectItem key={block.id} value={block.id}>
                     {block.name}
@@ -61,14 +61,14 @@ export const NoteFilters: React.FC<NoteFiltersProps> = ({
           <div className="space-y-2">
             <Label htmlFor="tag-filter">Filter by Tag</Label>
             <Select
-              value={selectedTag || ''}
+              value={selectedTag || "all"}
               onValueChange={handleTagChange}
             >
               <SelectTrigger id="tag-filter">
                 <SelectValue placeholder="All Tags" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Tags</SelectItem>
+                <SelectItem value="all">All Tags</SelectItem>
                 {tags.map((tag) => (
                   <SelectItem key={tag} value={tag}>
                     {tag}
