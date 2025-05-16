@@ -7,11 +7,11 @@ export const User: React.FC = () => {
     <div className="flex items-center gap-3">
       <Avatar>
         <AvatarImage src="https://github.com/shadcn.png" />
-        <AvatarFallback>JD</AvatarFallback>
+        <AvatarFallback>DG</AvatarFallback>
       </Avatar>
       <div>
-        <p className="text-sm font-medium leading-none">Jean Dupont</p>
-        <p className="text-xs text-sidebar-foreground/70">Château Brilliance</p>
+        <p className="text-sm font-medium leading-none">David Goldfarb</p>
+        <p className="text-xs text-sidebar-foreground/70">Clos de la Tech</p>
       </div>
     </div>
   );

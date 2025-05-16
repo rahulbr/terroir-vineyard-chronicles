@@ -85,7 +85,7 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
             {currentSeason.year}: {payload[0].value} GDD
           </p>
           {showPastSeason && payload[1] && payload[1].value && (
-            <p className="text-vineyard-soil">
+            <p className="text-purple-600">
               {pastSeason.year}: {payload[1].value} GDD
             </p>
           )}
@@ -109,7 +109,7 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
             variant={showPastSeason ? "default" : "outline"}
             size="sm"
             onClick={() => setShowPastSeason(!showPastSeason)}
-            className={showPastSeason ? "bg-vineyard-soil text-white" : ""}
+            className={showPastSeason ? "bg-purple-600 text-white" : ""}
           >
             Compare with {pastSeason.year}
           </Button>
@@ -153,7 +153,7 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
                 type="monotone"
                 dataKey="past"
                 name={`${pastSeason.year} Season`}
-                stroke="#8B6947"
+                stroke="#9b87f5"
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 dot={false}
