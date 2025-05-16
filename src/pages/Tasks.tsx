@@ -17,11 +17,11 @@ const Tasks = () => {
     
     let filtered = [...tasks];
     
-    if (category) {
+    if (category && category !== 'all') {
       filtered = filtered.filter(task => task.category === category);
     }
     
-    if (blockId) {
+    if (blockId && blockId !== 'all') {
       filtered = filtered.filter(task => task.blockId === blockId);
     }
     

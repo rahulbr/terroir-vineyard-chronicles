@@ -30,11 +30,11 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
   ];
 
   const handleCategoryChange = (value: string) => {
-    onFilterChange(value, selectedBlock);
+    onFilterChange(value || null, selectedBlock);
   };
 
   const handleBlockChange = (value: string) => {
-    onFilterChange(selectedCategory, value);
+    onFilterChange(selectedCategory, value || null);
   };
 
   const handleClearFilters = () => {
@@ -48,14 +48,14 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
           <div className="space-y-2">
             <Label htmlFor="category-filter">Filter by Category</Label>
             <Select
-              value={selectedCategory || ''}
+              value={selectedCategory || undefined}
               onValueChange={handleCategoryChange}
             >
               <SelectTrigger id="category-filter">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
                 {categories.map((category) => (
                   <SelectItem key={category.value} value={category.value}>
                     {category.label}
@@ -68,14 +68,14 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
           <div className="space-y-2">
             <Label htmlFor="block-filter">Filter by Block</Label>
             <Select
-              value={selectedBlock || ''}
+              value={selectedBlock || undefined}
               onValueChange={handleBlockChange}
             >
               <SelectTrigger id="block-filter">
                 <SelectValue placeholder="All Blocks" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Blocks</SelectItem>
+                <SelectItem value="all">All Blocks</SelectItem>
                 {blocks.map((block) => (
                   <SelectItem key={block.id} value={block.id}>
                     {block.name}

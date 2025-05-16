@@ -1,189 +1,157 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Season, PhaseEvent } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { format, parseISO, addDays, differenceInDays } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
+import { PhaseEvent, VineyardPhase } from '@/types';
+import { format, parseISO } from 'date-fns';
+import { ArrowRight, ArrowUp, ArrowDown, CalendarIcon } from 'lucide-react';
 
 interface PhasesCardProps {
-  currentSeason: Season;
-  pastSeason: Season;
+  currentPhase: VineyardPhase;
+  nextPhase: VineyardPhase;
+  phaseProgress: number;
+  phaseHistory: PhaseEvent[];
+  daysInPhase: number;
+  estimatedDaysRemaining: number;
+  trend: 'earlier' | 'later' | 'on-track';
+  trendValue: number;
 }
 
-// Helper function to get expected end date based on phase type
-const getExpectedEndDate = (startDate: string, phase: PhaseEvent['phase']): string => {
-  // Different phases have different typical durations
-  const phaseDurations: Record<string, number> = {
-    'budbreak': 14, // 2 weeks
-    'flowering': 10, // 10 days
-    'fruitset': 7, // 1 week
-    'veraison': 21, // 3 weeks
-    'harvest': 30, // variable but using 30 days as placeholder
-    'other': 7 // default 1 week
-  };
-  
-  const duration = phaseDurations[phase] || 7;
-  const endDate = addDays(parseISO(startDate), duration);
-  return format(endDate, 'yyyy-MM-dd');
-};
-
-// Helper to get the phase comparison text
-const getPhaseComparisonText = (currentDate: string, pastDate: string): string => {
-  const currentDateObj = parseISO(currentDate);
-  const pastDateObj = parseISO(pastDate);
-  
-  // Get current day/month and past day/month
-  const currentDayMonth = new Date(2000, currentDateObj.getMonth(), currentDateObj.getDate());
-  const pastDayMonth = new Date(2000, pastDateObj.getMonth(), pastDateObj.getDate());
-  
-  // Calculate difference in days, ignoring year
-  const diffDays = differenceInDays(currentDayMonth, pastDayMonth);
-  
-  if (diffDays === 0) {
-    return `Same timing as ${pastDateObj.getFullYear()}`;
-  } else if (diffDays < 0) {
-    return `${Math.abs(diffDays)} days later than ${pastDateObj.getFullYear()}`;
-  } else {
-    return `${diffDays} days earlier than ${pastDateObj.getFullYear()}`;
-  }
-};
-
-export const PhasesCard: React.FC<PhasesCardProps> = ({ currentSeason, pastSeason }) => {
-  // All growth phases in order
-  const allPhases: Array<PhaseEvent['phase']> = ['budbreak', 'flowering', 'fruitset', 'veraison', 'harvest'];
-  
-  // Current observed phases
-  const observedPhases = currentSeason.events
-    .filter(event => allPhases.includes(event.phase))
-    .map(event => event.phase);
-  
-  // Get date difference between years for the same phase
-  const getDateDifference = (phase: PhaseEvent['phase']): string | null => {
-    const currentPhaseEvent = currentSeason.events.find(e => e.phase === phase);
-    const pastPhaseEvent = pastSeason.events.find(e => e.phase === phase);
-    
-    if (!currentPhaseEvent || !pastPhaseEvent) return null;
-    
-    return getPhaseComparisonText(currentPhaseEvent.date, pastPhaseEvent.date);
-  };
-
-  // Check if a phase is currently in progress (has started but not ended)
-  const isPhaseInProgress = (phase: PhaseEvent['phase']): boolean => {
-    return observedPhases.includes(phase);
-  };
-
-  // Check if a date is in the past
-  const isInPast = (dateStr: string): boolean => {
-    const date = parseISO(dateStr);
-    return date < new Date(2025, 4, 16); // May 16, 2025
-  };
-
-  // Function to get the end date for a phase
-  const getPhaseEndDate = (phase: PhaseEvent['phase']): string | null => {
-    const phaseEvent = currentSeason.events.find(e => e.phase === phase);
-    if (!phaseEvent) return null;
-    
-    // For completed phases, use actual end date if available
-    if (phase === 'budbreak') {
-      return '2025-04-11'; // hardcoded end date for bud break
+export const PhasesCard: React.FC<PhasesCardProps> = ({
+  currentPhase,
+  nextPhase,
+  phaseProgress,
+  phaseHistory,
+  daysInPhase,
+  estimatedDaysRemaining,
+  trend,
+  trendValue
+}) => {
+  // Function to get color for phase badge
+  const getPhaseColor = (phase: VineyardPhase) => {
+    switch (phase) {
+      case 'flowering':
+        return 'bg-green-100 text-green-800 hover:bg-green-100';
+      case 'fruitset':
+        return 'bg-blue-100 text-blue-800 hover:bg-blue-100';
+      case 'veraison':
+        return 'bg-purple-100 text-purple-800 hover:bg-purple-100';
+      case 'harvest':
+        return 'bg-amber-100 text-amber-800 hover:bg-amber-100';
+      default:
+        return 'bg-gray-100 text-gray-800 hover:bg-gray-100';
     }
-    
-    return getExpectedEndDate(phaseEvent.date, phase);
   };
+
+  // Function to get trend icon and color
+  const getTrendInfo = () => {
+    if (trend === 'earlier') {
+      return {
+        icon: <ArrowUp className="h-4 w-4 text-green-600" />,
+        text: 'text-green-600',
+        description: `${trendValue} days earlier than average`
+      };
+    } else if (trend === 'later') {
+      return {
+        icon: <ArrowDown className="h-4 w-4 text-amber-600" />,
+        text: 'text-amber-600',
+        description: `${trendValue} days later than average`
+      };
+    } else {
+      return {
+        icon: <ArrowRight className="h-4 w-4 text-blue-600" />,
+        text: 'text-blue-600',
+        description: 'On track with average timing'
+      };
+    }
+  };
+
+  const trendInfo = getTrendInfo();
 
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle>Growth Phases</CardTitle>
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg font-medium">Growth Phases</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-6">
-          {allPhases.map((phase) => {
-            const observed = observedPhases.includes(phase);
-            const phaseEvent = currentSeason.events.find(e => e.phase === phase);
-            const comparisonText = getDateDifference(phase);
-            const inProgress = isPhaseInProgress(phase);
-            const endDate = getPhaseEndDate(phase);
-            
-            if (!observed) {
-              // Don't show anything for phases that haven't started yet
-              return (
-                <div key={phase} className="flex items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full bg-gray-300" />
-                    <span className="capitalize font-medium text-gray-400">{phase}</span>
-                  </div>
-                </div>
-              );
-            }
-            
-            return (
-              <div key={phase} className="flex flex-col">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={cn(
-                        "w-3 h-3 rounded-full",
-                        observed ? "bg-vineyard-leaf" : "bg-gray-300"
-                      )}
-                    />
-                    <span className="capitalize font-medium">{phase}</span>
-                  </div>
-                </div>
-                
-                {/* Date information for observed phases */}
-                {observed && (
-                  <div className="pl-6 space-y-1">
-                    {phase === 'budbreak' ? (
-                      <>
-                        <div className="flex items-center">
-                          <Badge variant="outline" className="mr-1">
-                            Mar 28 - Apr 11 2025
-                          </Badge>
-                        </div>
-                        {comparisonText && (
-                          <div>
-                            <span className="text-sm font-medium text-vineyard-leaf">
-                              {comparisonText}
-                            </span>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">Start:</span>
-                          <Badge variant="outline">
-                            {format(parseISO(phaseEvent!.date), 'MMM d, yyyy')}
-                          </Badge>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-muted-foreground">End:</span>
-                          <Badge variant="outline" className="text-vineyard-burgundy">
-                            {inProgress 
-                              ? (endDate && (isInPast(endDate) || phase === 'budbreak'))
-                                ? format(parseISO(endDate), 'MMM d, yyyy')
-                                : `Expected: ${endDate ? format(parseISO(endDate), 'MMM d, yyyy') : 'Unknown'}`
-                              : "Completed"}
-                          </Badge>
-                        </div>
-                        
-                        {comparisonText && (
-                          <div className="mt-1">
-                            <span className="text-sm font-medium text-vineyard-leaf">
-                              {comparisonText}
-                            </span>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
+        <div className="space-y-4">
+          {/* Current Phase */}
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Current Phase:</span>
+                <Badge className={`${getPhaseColor(currentPhase)} capitalize`}>
+                  {currentPhase}
+                </Badge>
               </div>
-            );
-          })}
+              <span className="text-xs text-muted-foreground">
+                {daysInPhase} days in phase
+              </span>
+            </div>
+            <Progress value={phaseProgress} className="h-2" />
+            <div className="flex justify-between mt-1">
+              <span className="text-xs text-muted-foreground">Progress</span>
+              <span className="text-xs font-medium">{phaseProgress}%</span>
+            </div>
+          </div>
+
+          {/* Next Phase */}
+          <div className="flex justify-between items-center pt-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Next Phase:</span>
+              <Badge variant="outline" className="capitalize">
+                {nextPhase}
+              </Badge>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              Est. {estimatedDaysRemaining} days remaining
+            </span>
+          </div>
+
+          {/* Trend */}
+          <div className="flex items-center gap-1 pt-2">
+            {trendInfo.icon}
+            <span className={`text-xs ${trendInfo.text} font-medium`}>
+              {trendInfo.description}
+            </span>
+          </div>
+
+          {/* Phase History */}
+          <div className="border-t pt-3 mt-3">
+            <h4 className="text-sm font-medium mb-2">Recent Phase Changes</h4>
+            <div className="space-y-2">
+              {phaseHistory.slice(0, 3).map((event, index) => (
+                <div key={index} className="flex justify-between items-center text-sm">
+                  <div className="flex items-center gap-2">
+                    <Badge className={`${getPhaseColor(event.phase as VineyardPhase)} capitalize`}>
+                      {event.phase}
+                    </Badge>
+                    <span className="text-xs">{event.notes.substring(0, 20)}...</span>
+                  </div>
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <CalendarIcon className="h-3 w-3 mr-1" />
+                    {format(parseISO(event.date), 'MMM d')}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Prediction */}
+          <div className="border-t pt-3 mt-3">
+            <h4 className="text-sm font-medium mb-1">Harvest Prediction</h4>
+            <div className="flex items-center gap-2">
+              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">
+                {currentPhase === 'flowering' ? 'Oct 5 - Oct 15 (estimated)' : 'Oct 10 (estimated)'}
+              </span>
+            </div>
+            {trendValue > 0 && currentPhase === "flowering" && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Trending earlier than last year by {trendValue} days
+              </p>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
