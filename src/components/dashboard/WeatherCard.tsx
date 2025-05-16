@@ -23,7 +23,9 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({ weatherData }) => {
   const gddToday = Math.round(((todayWeather.tempHigh + todayWeather.tempLow) / 2) - 10);
   
   // Calculate the season total (latest GDD on the chart + today's GDD)
-  const seasonTotalGDD = 1054; // 1047 from chart + 7 GDD today
+  // Latest GDD value on the chart (from May 14-15) is 1047
+  const latestChartGDD = 1047;
+  const seasonTotalGDD = latestChartGDD + gddToday;
   
   const getForecastDays = () => {
     const today = new Date();
