@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { GddChart } from '@/components/dashboard/GddChart';
@@ -6,6 +7,7 @@ import { WeatherCard } from '@/components/dashboard/WeatherCard';
 import { PredictionsCard } from '@/components/dashboard/PredictionsCard';
 import { ActivityFeed } from '@/components/activityFeed/ActivityFeed';
 import { QuickActions } from '@/components/dashboard/QuickActions';
+import { VineyardChatbot } from '@/components/dashboard/VineyardChatbot';
 import { 
   currentSeason, 
   pastSeason, 
@@ -111,6 +113,7 @@ const Index = () => {
   return (
     <AppLayout>
       <div className="space-y-6">
+        {/* Dashboard header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold">
@@ -130,6 +133,7 @@ const Index = () => {
           />
         </div>
 
+        {/* GDD Chart and Phases section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2">
             <GddChart 
@@ -146,6 +150,10 @@ const Index = () => {
           </div>
         </div>
 
+        {/* NEW: Vineyard Chatbot section */}
+        <VineyardChatbot />
+
+        {/* Weather and Predictions section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <WeatherCard weatherData={weatherData} />
@@ -161,6 +169,7 @@ const Index = () => {
           </div>
         </div>
 
+        {/* Activity Feed */}
         <div>
           <ActivityFeed activities={activities} />
         </div>
