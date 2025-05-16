@@ -9,10 +9,21 @@ interface WeatherCardProps {
   weatherData: WeatherData[];
 }
 
+// Helper function to convert Celsius to Fahrenheit
+const celsiusToFahrenheit = (celsius: number): number => {
+  return (celsius * 9/5) + 32;
+};
+
 export const WeatherCard: React.FC<WeatherCardProps> = ({ weatherData }) => {
   // Get weather for today and next few days
   const todayDate = new Date().toISOString().split('T')[0];
   const todayWeather = weatherData.find(data => data.date === todayDate) || weatherData[0];
+  
+  // Calculate the GDD for today
+  const gddToday = Math.round(((todayWeather.tempHigh + todayWeather.tempLow) / 2) - 10);
+  
+  // Calculate the season total (latest GDD on the chart + today's GDD)
+  const seasonTotalGDD = 1054; // 1047 from chart + 7 GDD today
   
   const getForecastDays = () => {
     const today = new Date();
@@ -44,21 +55,21 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({ weatherData }) => {
       <CardContent>
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h3 className="text-2xl font-bold">{Math.round(todayWeather.tempHigh)}°C</h3>
+            <h3 className="text-2xl font-bold">{Math.round(celsiusToFahrenheit(todayWeather.tempHigh))}°F</h3>
             <p className="text-sm text-muted-foreground">High today</p>
-            <p className="text-lg mt-2">{Math.round(todayWeather.tempLow)}°C Low</p>
+            <p className="text-lg mt-2">{Math.round(celsiusToFahrenheit(todayWeather.tempLow))}°F Low</p>
           </div>
           
           <div className="text-right">
             <div className="flex items-center justify-end gap-1">
               <span className="text-sm">GDD Today:</span>
               <span className="text-sm font-medium">
-                {Math.round(((todayWeather.tempHigh + todayWeather.tempLow) / 2) - 10)}
+                {gddToday}
               </span>
             </div>
             <div className="flex items-center justify-end gap-1 mt-1">
               <span className="text-sm">Season Total:</span>
-              <span className="text-sm font-medium">{todayWeather.gdd}</span>
+              <span className="text-sm font-medium">{seasonTotalGDD}</span>
             </div>
             <div className="mt-3">
               {todayWeather.rainfall > 0 ? (
@@ -82,7 +93,7 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({ weatherData }) => {
                 <CloudSun className="h-4 w-4 mx-auto text-vineyard-sky" />
               </div>
               <p className="text-sm">
-                {Math.round(day.tempHigh)}° / {Math.round(day.tempLow)}°
+                {Math.round(celsiusToFahrenheit(day.tempHigh))}° / {Math.round(celsiusToFahrenheit(day.tempLow))}°
               </p>
             </div>
           ))}

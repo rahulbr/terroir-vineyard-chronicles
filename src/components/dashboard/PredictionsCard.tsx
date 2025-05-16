@@ -19,10 +19,10 @@ export const PredictionsCard: React.FC<PredictionsCardProps> = ({
   diseaseRisk,
   recommendations
 }) => {
-  // Update the veraison recommendation to 48 days
+  // Update the veraison recommendation to 58 days
   const updatedRecommendations = recommendations.map(rec => {
     if (rec.includes("veraison beginning in")) {
-      return rec.replace(/veraison beginning in \d+ days/, "veraison beginning in 48 days");
+      return rec.replace(/veraison beginning in \d+ days/, "veraison beginning in approximately 58 days");
     }
     return rec;
   });
@@ -56,11 +56,8 @@ export const PredictionsCard: React.FC<PredictionsCardProps> = ({
               </div>
               <div className="bg-muted/50 p-2 rounded-md text-center">
                 <p className="text-sm">Downy Mildew</p>
-                <p className={`font-medium ${
-                  diseaseRisk.downyMildew === 'High' ? 'text-red-600' :
-                  diseaseRisk.downyMildew === 'Medium' ? 'text-amber-600' : 'text-green-600'
-                }`}>
-                  {diseaseRisk.downyMildew}
+                <p className="font-medium text-gray-500">
+                  N/A
                 </p>
               </div>
               <div className="bg-muted/50 p-2 rounded-md text-center">

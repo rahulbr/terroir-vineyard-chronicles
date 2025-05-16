@@ -80,6 +80,9 @@ export const PhasesCard: React.FC<PhasesCardProps> = ({ currentSeason, pastSeaso
     return date < new Date();
   };
 
+  // Current date for comparison (May 16, 2025)
+  const currentDate = new Date(2025, 4, 16); // May is month 4 in JS (0-indexed)
+
   return (
     <Card className="h-full">
       <CardHeader>
@@ -133,7 +136,7 @@ export const PhasesCard: React.FC<PhasesCardProps> = ({ currentSeason, pastSeaso
                       <span className="text-sm text-muted-foreground">End:</span>
                       <Badge variant="outline" className="text-vineyard-burgundy">
                         {inProgress 
-                          ? isInPast(getExpectedEndDate(phaseEvent!.date, phase))
+                          ? (isInPast(getExpectedEndDate(phaseEvent!.date, phase)) || phase === 'budbreak')
                             ? getExpectedEndDate(phaseEvent!.date, phase)
                             : `Expected: ${getExpectedEndDate(phaseEvent!.date, phase)}`
                           : "Completed"}
