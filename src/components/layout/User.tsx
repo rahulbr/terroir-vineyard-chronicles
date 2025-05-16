@@ -6,7 +6,7 @@ export const User: React.FC = () => {
   return (
     <div className="flex items-center gap-3">
       <Avatar>
-        <AvatarImage src="https://github.com/shadcn.png" />
+        <AvatarImage src="/lovable-uploads/38f69fef-9099-4dc0-b72d-3b094728c03d.png" alt="David Goldfarb" />
         <AvatarFallback>DG</AvatarFallback>
       </Avatar>
       <div>

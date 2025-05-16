@@ -15,8 +15,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     <SidebarProvider>
       <div className="min-h-screen flex flex-col md:flex-row bg-background w-full">
         {/* Sidebar for larger screens - narrower width */}
-        <div className="hidden md:block" style={{ width: '200px' }}>
-          <Sidebar className="w-[200px]">
+        <div className="hidden md:block" style={{ width: '180px' }}>
+          <Sidebar className="w-[180px]">
             <SidebarHeader className="p-4">
               <h2 className="text-xl font-bold text-sidebar-foreground">
                 Vigneron.AI
