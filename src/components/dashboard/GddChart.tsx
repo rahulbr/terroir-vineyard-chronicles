@@ -13,6 +13,8 @@ import {
   Legend,
   ResponsiveContainer,
   ReferenceDot,
+  ReferenceLine,
+  ReferenceArea,
 } from 'recharts';
 import { format, parseISO, isValid } from 'date-fns';
 import { Info } from 'lucide-react';
@@ -82,7 +84,7 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
     };
   });
 
-  // Find events to display on the chart
+  // Process phenology events for visualization
   const phaseMarkers = currentSeason.events.map(event => {
     const gddPoint = currentSeason.gddData.find(point => point.date === event.date);
     return {
@@ -91,6 +93,85 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
       event
     };
   });
+  
+  // Process past season phenology events for comparison
+  const pastPhaseMarkers = pastSeason.events.map(event => {
+    const gddPoint = pastSeason.gddData.find(point => point.date === event.date);
+    return {
+      x: event.date,
+      y: gddPoint?.value || 0,
+      event
+    };
+  });
+
+  // Create phenology stage areas
+  const phenologyStages = React.useMemo(() => {
+    const phases = ['budbreak', 'flowering', 'fruitset', 'veraison', 'harvest'];
+    const currentPhases: {phase: string, start: string, end: string | null, gddStart: number, gddEnd: number | null}[] = [];
+    const pastPhases: {phase: string, start: string, end: string | null, gddStart: number, gddEnd: number | null}[] = [];
+    
+    // Process current season phases
+    phases.forEach((phase, index) => {
+      const phaseEvent = currentSeason.events.find(e => e.phase === phase);
+      if (phaseEvent) {
+        const nextPhase = phases[index + 1];
+        const nextPhaseEvent = nextPhase ? currentSeason.events.find(e => e.phase === nextPhase) : null;
+        
+        const gddAtPhase = currentSeason.gddData.find(point => point.date === phaseEvent.date)?.value || 0;
+        const gddAtNextPhase = nextPhaseEvent 
+          ? currentSeason.gddData.find(point => point.date === nextPhaseEvent.date)?.value || null
+          : null;
+          
+        currentPhases.push({
+          phase,
+          start: phaseEvent.date,
+          end: nextPhaseEvent?.date || null,
+          gddStart: gddAtPhase,
+          gddEnd: gddAtNextPhase
+        });
+      }
+    });
+    
+    // Process past season phases
+    phases.forEach((phase, index) => {
+      const phaseEvent = pastSeason.events.find(e => e.phase === phase);
+      if (phaseEvent) {
+        const nextPhase = phases[index + 1];
+        const nextPhaseEvent = nextPhase ? pastSeason.events.find(e => e.phase === nextPhase) : null;
+        
+        const gddAtPhase = pastSeason.gddData.find(point => point.date === phaseEvent.date)?.value || 0;
+        const gddAtNextPhase = nextPhaseEvent 
+          ? pastSeason.gddData.find(point => point.date === nextPhaseEvent.date)?.value || null
+          : null;
+          
+        pastPhases.push({
+          phase,
+          start: phaseEvent.date,
+          end: nextPhaseEvent?.date || null,
+          gddStart: gddAtPhase,
+          gddEnd: gddAtNextPhase
+        });
+      }
+    });
+    
+    return { currentPhases, pastPhases };
+  }, [currentSeason, pastSeason]);
+
+  // Get phase colors for visualization
+  const getPhaseColor = (phase: string, isCurrentSeason: boolean) => {
+    const baseColors = {
+      budbreak: '#F0E68C',  // Light yellow
+      flowering: '#98FB98',  // Pale green
+      fruitset: '#87CEFA',  // Light sky blue
+      veraison: '#DDA0DD',  // Plum
+      harvest: '#F4A460',   // Sandy brown
+    };
+    
+    const color = baseColors[phase as keyof typeof baseColors] || '#E0E0E0';
+    
+    // Make past season colors more transparent/muted
+    return isCurrentSeason ? color : `${color}80`;  // Adding 80 for 50% opacity
+  };
 
   // Function to find phenology stage for a specific date
   const getPhenologyStage = (date: string): string | null => {
@@ -167,6 +248,20 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
       // Get phenology stage if available
       const phenologyStage = getPhenologyStage(label);
       
+      // Compare with past season
+      const currentDateValue = payload[0]?.value;
+      const pastDateValue = payload[1]?.value;
+      
+      let comparisonText = "";
+      if (showPastSeason && currentDateValue && pastDateValue) {
+        const diff = currentDateValue - pastDateValue;
+        if (Math.abs(diff) > 5) {
+          comparisonText = diff > 0 
+            ? `${Math.round(diff)} GDD ahead of ${pastSeason.year}`
+            : `${Math.round(Math.abs(diff))} GDD behind ${pastSeason.year}`;
+        }
+      }
+      
       return (
         <div className="bg-white p-4 shadow-md rounded-md border">
           <p className="font-medium">{formattedDate}</p>
@@ -181,6 +276,11 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
           {phenologyStage && (
             <p className="mt-2 text-vineyard-leaf font-medium capitalize">
               {phenologyStage} phase
+            </p>
+          )}
+          {comparisonText && (
+            <p className="mt-1 text-sm font-medium">
+              {comparisonText}
             </p>
           )}
         </div>
@@ -233,6 +333,85 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend align="right" verticalAlign="top" />
+            
+            {/* Phase reference areas for current season */}
+            {phenologyStages.currentPhases.map((phase, index) => (
+              phase.end && (
+                <ReferenceArea
+                  key={`current-phase-${index}`}
+                  x1={phase.start}
+                  x2={phase.end}
+                  y1={0}
+                  y2={phase.gddEnd || 'dataMax'}
+                  fill={getPhaseColor(phase.phase, true)}
+                  fillOpacity={0.15}
+                  strokeOpacity={0.3}
+                  stroke="#000"
+                  strokeDasharray="3 3"
+                />
+              )
+            ))}
+            
+            {/* Phase markers for current season */}
+            {phaseMarkers.map((marker, index) => (
+              <ReferenceArea
+                key={`current-phase-marker-${index}`}
+                x1={marker.x}
+                x2={marker.x}
+                y1={0}
+                y2={marker.y}
+                fillOpacity={0}
+                stroke="#5A7247"
+                strokeWidth={2}
+                strokeDasharray="3 3"
+              />
+            ))}
+            
+            {/* Phase labels for current season */}
+            {phaseMarkers.map((marker, index) => (
+              <ReferenceLine
+                key={`current-phase-label-${index}`}
+                x={marker.x}
+                stroke="none"
+                label={{
+                  value: `${marker.event.phase} (2025)`,
+                  position: 'top',
+                  fill: '#5A7247',
+                  fontSize: 10
+                }}
+              />
+            ))}
+            
+            {/* Add past season phase markers if showing comparison */}
+            {showPastSeason && pastPhaseMarkers.map((marker, index) => (
+              <ReferenceArea
+                key={`past-phase-marker-${index}`}
+                x1={marker.x}
+                x2={marker.x}
+                y1={0}
+                y2={marker.y}
+                fillOpacity={0}
+                stroke="#9b87f5"
+                strokeWidth={1}
+                strokeDasharray="3 3"
+              />
+            ))}
+            
+            {/* Phase labels for past season */}
+            {showPastSeason && pastPhaseMarkers.map((marker, index) => (
+              <ReferenceLine
+                key={`past-phase-label-${index}`}
+                x={marker.x}
+                stroke="none"
+                label={{
+                  value: `${marker.event.phase} (2024)`,
+                  position: 'insideBottomLeft',
+                  fill: '#9b87f5',
+                  fontSize: 10
+                }}
+              />
+            ))}
+            
             <Line
               type="monotone"
               dataKey="current"
@@ -249,7 +428,7 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
                 name={`${pastSeason.year} Season`}
                 stroke="#9b87f5"
                 strokeWidth={2}
-                strokeDasharray="0" // Changed to solid line (no dash array)
+                strokeDasharray="0" 
                 dot={false}
               />
             )}
@@ -281,8 +460,37 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
                 style={{ cursor: 'pointer' }}
               />
             ))}
+            
+            {/* Past season phase event markers */}
+            {showPastSeason && pastPhaseMarkers.map((marker, index) => (
+              <ReferenceDot
+                key={`past-${index}`}
+                x={marker.x}
+                y={marker.y}
+                r={4}
+                fill="#9b87f5"
+                stroke="#ffffff"
+                strokeWidth={1}
+                style={{ cursor: 'pointer' }}
+              />
+            ))}
           </LineChart>
         </ResponsiveContainer>
+        
+        {/* Legend for phenology stages */}
+        <div className="absolute bottom-8 left-6 bg-white/90 p-2 rounded-md border border-gray-200 flex flex-wrap gap-2 max-w-[50%]">
+          <div className="text-xs font-medium mb-1 w-full">Phenology Stages:</div>
+          {['budbreak', 'flowering', 'fruitset', 'veraison', 'harvest'].map((phase) => (
+            <div key={phase} className="flex items-center gap-1">
+              <div 
+                className="w-3 h-3 rounded-sm" 
+                style={{ backgroundColor: getPhaseColor(phase, true) }}
+              ></div>
+              <span className="text-xs capitalize">{phase}</span>
+            </div>
+          ))}
+        </div>
+        
         <div className="text-xs text-muted-foreground flex items-center justify-end absolute bottom-4 right-6">
           <Info className="h-3 w-3 mr-1" />
           Weather data last updated at {format(parseISO(lastUpdated), 'MMM d, yyyy h:mm a')}
