@@ -1,4 +1,3 @@
-
 export interface VineyardBlock {
   id: string;
   name: string;
@@ -64,3 +63,5 @@ export interface ActivityItem {
   blockId?: string;
   iconType: string;
 }
+
+export type VineyardPhase = 'budbreak' | 'flowering' | 'fruitset' | 'veraison' | 'harvest' | 'other';
