@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { GddChart } from '@/components/dashboard/GddChart';
@@ -132,37 +131,40 @@ const Index = () => {
           />
         </div>
 
-        {/* GDD Chart takes full width at the top */}
+        {/* Insights and Recommendations section (moved to top) */}
         <div>
-          <GddChart 
-            currentSeason={currentSeason}
-            pastSeason={pastSeason}
-            onPhaseClick={handlePhaseClick}
+          <PredictionsCard
+            harvestDate={predictions.harvestDate}
+            diseaseRisk={predictions.diseaseRisk}
+            recommendations={predictions.recommendations}
+            nextPredictedPhase="Fruitset"
+            nextPredictedDays="June 8-12"
           />
         </div>
 
-        {/* Growth Phases in a horizontal section */}
-        <div>
-          <PhasesCard 
-            currentSeason={currentSeason}
-            pastSeason={pastSeason}
-          />
-        </div>
-
-        {/* Weather and Predictions section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <WeatherCard weatherData={weatherData} />
-          </div>
-          <div className="md:col-span-2">
-            <PredictionsCard
-              harvestDate={predictions.harvestDate}
-              diseaseRisk={predictions.diseaseRisk}
-              recommendations={predictions.recommendations}
-              nextPredictedPhase="Fruitset"
-              nextPredictedDays="June 8-12"
+        {/* Growth Curve and Growth Phases side by side */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {/* GDD Chart takes 3/4 of the width */}
+          <div className="md:col-span-3">
+            <GddChart 
+              currentSeason={currentSeason}
+              pastSeason={pastSeason}
+              onPhaseClick={handlePhaseClick}
             />
           </div>
+          
+          {/* Growth Phases takes 1/4 of the width as a vertical section */}
+          <div className="md:col-span-1">
+            <PhasesCard 
+              currentSeason={currentSeason}
+              pastSeason={pastSeason}
+            />
+          </div>
+        </div>
+
+        {/* Weather section */}
+        <div>
+          <WeatherCard weatherData={weatherData} />
         </div>
 
         {/* Activity Feed */}
