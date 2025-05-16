@@ -153,6 +153,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     const action = phaseAction === 'endCurrent' ? 'ended' : 'started';
     
     const newPhase: PhaseEvent = {
+      id: `phase-${Date.now()}`, // Add the required id property
       phase: phase as any,
       date: new Date().toISOString().split('T')[0],
       notes: phaseNotes
