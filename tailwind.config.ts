@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,13 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				vineyard: {
+					burgundy: '#7D2933',
+					leaf: '#5A7247',
+					soil: '#8B6947',
+					sky: '#6D92B6',
+					gold: '#D0A640'
 				}
 			},
 			borderRadius: {

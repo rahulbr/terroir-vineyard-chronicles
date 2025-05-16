@@ -1,13 +1,166 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import React, { useState } from 'react';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { GddChart } from '@/components/dashboard/GddChart';
+import { PhasesCard } from '@/components/dashboard/PhasesCard';
+import { WeatherCard } from '@/components/dashboard/WeatherCard';
+import { PredictionsCard } from '@/components/dashboard/PredictionsCard';
+import { ActivityFeed } from '@/components/activityFeed/ActivityFeed';
+import { QuickActions } from '@/components/dashboard/QuickActions';
+import { 
+  currentSeason, 
+  pastSeason, 
+  weatherData, 
+  predictions, 
+  activityItems,
+  vineyardBlocks,
+  tasks,
+  notes
+} from '@/data/mockData';
+import { 
+  PhaseEvent, 
+  TaskItem, 
+  NoteItem, 
+  ActivityItem as ActivityItemType
+} from '@/types';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Grape } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
+  const [activities, setActivities] = useState<ActivityItemType[]>(activityItems);
+  const [selectedPhase, setSelectedPhase] = useState<PhaseEvent | null>(null);
+  const { toast } = useToast();
+
+  const handlePhaseClick = (phase: PhaseEvent) => {
+    setSelectedPhase(phase);
+  };
+
+  const handleAddTask = (task: TaskItem) => {
+    const newActivity: ActivityItemType = {
+      id: task.id,
+      type: 'task',
+      date: task.date,
+      title: task.title,
+      description: task.description,
+      blockId: task.blockId,
+      iconType: task.category
+    };
+    
+    setActivities([newActivity, ...activities]);
+    
+    toast({
+      title: "Task Added",
+      description: `${task.title} has been added to your tasks.`
+    });
+  };
+
+  const handleAddNote = (note: NoteItem) => {
+    const newActivity: ActivityItemType = {
+      id: note.id,
+      type: 'note',
+      date: note.date,
+      title: `Note: ${note.tags.join(', ')}`,
+      description: note.content,
+      blockId: note.blockId,
+      iconType: 'note'
+    };
+    
+    setActivities([newActivity, ...activities]);
+    
+    toast({
+      title: "Note Added",
+      description: "Your vineyard note has been recorded."
+    });
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center">
+              <Grape className="h-8 w-8 mr-2 text-vineyard-burgundy" />
+              Vigneron.AI Dashboard
+            </h1>
+            <p className="text-muted-foreground">
+              2025 Growing Season - Château Brilliance
+            </p>
+          </div>
+          <QuickActions 
+            blocks={vineyardBlocks} 
+            onAddTask={handleAddTask}
+            onAddNote={handleAddNote}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2">
+            <GddChart 
+              currentSeason={currentSeason}
+              pastSeason={pastSeason}
+              onPhaseClick={handlePhaseClick}
+            />
+          </div>
+          <div>
+            <PhasesCard 
+              currentSeason={currentSeason}
+              pastSeason={pastSeason}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <WeatherCard weatherData={weatherData} />
+          </div>
+          <div className="md:col-span-2">
+            <PredictionsCard
+              harvestDate={predictions.harvestDate}
+              diseaseRisk={predictions.diseaseRisk}
+              recommendations={predictions.recommendations}
+            />
+          </div>
+        </div>
+
+        <div>
+          <ActivityFeed activities={activities} />
+        </div>
       </div>
-    </div>
+
+      {/* Phase detail dialog */}
+      <Dialog 
+        open={!!selectedPhase} 
+        onOpenChange={(open) => !open && setSelectedPhase(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="capitalize">
+              {selectedPhase?.phase} Phase
+            </DialogTitle>
+            <DialogDescription>
+              Recorded on {selectedPhase && format(parseISO(selectedPhase.date), 'MMMM d, yyyy')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p>{selectedPhase?.notes}</p>
+            <div className="mt-4 bg-muted p-4 rounded-md">
+              <p className="text-sm font-medium">Growing Degree Days at this phase:</p>
+              <p className="text-xl font-bold text-vineyard-burgundy">
+                {currentSeason.gddData.find(point => point.date === selectedPhase?.date)?.value || 0} GDD
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </AppLayout>
   );
 };
 
