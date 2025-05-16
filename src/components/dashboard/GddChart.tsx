@@ -78,7 +78,7 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
       date: point.date,
       current: point.value,
       past: pastYearPoint ? pastYearPoint.value : null,
-      formattedDate: format(parseISO(point.date), 'MMM d')
+      formattedDate: format(new Date(point.date), 'MMM d')  // Using new Date() for safer parsing
     };
   });
 
@@ -118,23 +118,29 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
     }
     
     // Now determine which phase a given date belongs to
-    const dateObj = new Date(date);
-    
-    // Sort events by date
-    const sortedDates = Object.keys(phaseStarts).sort();
-    
-    for (let i = 0; i < sortedDates.length; i++) {
-      const startDate = sortedDates[i];
-      const endDate = phaseStarts[startDate].end;
-      const nextStartDate = sortedDates[i + 1];
+    try {
+      const dateObj = new Date(date);
+      if (!isValid(dateObj)) return null;
       
-      const isAfterStart = dateObj >= new Date(startDate);
-      const isBeforeEnd = !endDate || dateObj <= new Date(endDate);
-      const isBeforeNextPhase = !nextStartDate || dateObj < new Date(nextStartDate);
+      // Sort events by date
+      const sortedDates = Object.keys(phaseStarts).sort();
       
-      if (isAfterStart && isBeforeEnd && isBeforeNextPhase) {
-        return phaseStarts[startDate].phase;
+      for (let i = 0; i < sortedDates.length; i++) {
+        const startDate = sortedDates[i];
+        const endDate = phaseStarts[startDate].end;
+        const nextStartDate = sortedDates[i + 1];
+        
+        const isAfterStart = dateObj >= new Date(startDate);
+        const isBeforeEnd = !endDate || dateObj <= new Date(endDate);
+        const isBeforeNextPhase = !nextStartDate || dateObj < new Date(nextStartDate);
+        
+        if (isAfterStart && isBeforeEnd && isBeforeNextPhase) {
+          return phaseStarts[startDate].phase;
+        }
       }
+    } catch (error) {
+      console.error("Error determining phenology stage:", error);
+      return null;
     }
     
     return null;
@@ -146,13 +152,15 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
       // Safely format the date - first check if it's a valid date string
       let formattedDate = "";
       try {
-        const dateObj = parseISO(label);
+        // Ensure we're parsing a valid date
+        const dateObj = new Date(label);
         if (isValid(dateObj)) {
           formattedDate = format(dateObj, 'MMM d, yyyy');
         } else {
           formattedDate = label; // Fallback to using the label as is
         }
       } catch (error) {
+        console.error("Date formatting error:", error);
         formattedDate = label; // In case of error, use label as is
       }
 
@@ -163,7 +171,7 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
         <div className="bg-white p-4 shadow-md rounded-md border">
           <p className="font-medium">{formattedDate}</p>
           <p className="text-vineyard-burgundy">
-            {currentSeason.year}: {payload[0].value} GDD
+            {currentSeason.year}: {payload[0]?.value} GDD
           </p>
           {showPastSeason && payload[1] && payload[1].value && (
             <p className="text-purple-600">
@@ -201,7 +209,7 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="h-[400px]">
+      <CardContent className="h-[400px] relative">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartData}
@@ -275,7 +283,7 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
             ))}
           </LineChart>
         </ResponsiveContainer>
-        <div className="mt-2 text-xs text-muted-foreground flex items-center justify-end absolute bottom-4 right-6">
+        <div className="text-xs text-muted-foreground flex items-center justify-end absolute bottom-4 right-6">
           <Info className="h-3 w-3 mr-1" />
           Weather data last updated at {format(parseISO(lastUpdated), 'MMM d, yyyy h:mm a')}
         </div>

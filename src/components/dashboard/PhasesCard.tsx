@@ -14,7 +14,7 @@ interface PhasesCardProps {
 // Helper function to get expected end date based on phase type
 const getExpectedEndDate = (startDate: string, phase: PhaseEvent['phase']): string => {
   // Different phases have different typical durations
-  const phaseDurations: Record<PhaseEvent['phase'], number> = {
+  const phaseDurations: Record<string, number> = {
     'budbreak': 14, // 2 weeks
     'flowering': 10, // 10 days
     'fruitset': 7, // 1 week
@@ -25,7 +25,7 @@ const getExpectedEndDate = (startDate: string, phase: PhaseEvent['phase']): stri
   
   const duration = phaseDurations[phase] || 7;
   const endDate = addDays(parseISO(startDate), duration);
-  return format(endDate, 'MMM d, yyyy');
+  return format(endDate, 'yyyy-MM-dd');
 };
 
 // Helper to get the phase comparison text
