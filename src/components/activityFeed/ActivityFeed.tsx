@@ -5,7 +5,7 @@ import { ActivityItem as ActivityItemType } from '@/types';
 import { ActivityItem } from './ActivityItem';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Activity, ListTodo, Filter } from 'lucide-react';
+import { ListTodo, Filter } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,21 +19,34 @@ interface ActivityFeedProps {
 
 export const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities }) => {
   const [filters, setFilters] = useState<{
-    task: boolean;
+    pruning: boolean;
+    spraying: boolean;
+    leafing: boolean;
+    harvesting: boolean;
+    planting: boolean;
+    other: boolean;
     note: boolean;
-    phase: boolean;
   }>({
-    task: true,
+    pruning: true,
+    spraying: true,
+    leafing: true,
+    harvesting: true,
+    planting: true,
+    other: true,
     note: true,
-    phase: true,
   });
 
-  const filteredActivities = activities.filter(
-    activity => 
-      (activity.type === 'task' && filters.task) || 
-      (activity.type === 'note' && filters.note) ||
-      (activity.type === 'phase' && filters.phase)
-  );
+  const filteredActivities = activities.filter(activity => {
+    if (activity.type === 'note') return filters.note;
+    if (activity.type === 'task') {
+      return filters[activity.iconType as keyof typeof filters] || false;
+    }
+    if (activity.type === 'phase') {
+      // Always show phase activities as they're now handled separately
+      return true;
+    }
+    return false;
+  });
 
   const toggleFilter = (filterType: keyof typeof filters) => {
     setFilters(prev => ({
@@ -58,22 +71,46 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities }) => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuCheckboxItem
-                checked={filters.task}
-                onCheckedChange={() => toggleFilter('task')}
+                checked={filters.pruning}
+                onCheckedChange={() => toggleFilter('pruning')}
               >
-                Tasks
+                Pruning
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={filters.spraying}
+                onCheckedChange={() => toggleFilter('spraying')}
+              >
+                Spraying
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={filters.leafing}
+                onCheckedChange={() => toggleFilter('leafing')}
+              >
+                Leaf Management
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={filters.harvesting}
+                onCheckedChange={() => toggleFilter('harvesting')}
+              >
+                Harvesting
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={filters.planting}
+                onCheckedChange={() => toggleFilter('planting')}
+              >
+                Planting
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={filters.other}
+                onCheckedChange={() => toggleFilter('other')}
+              >
+                Other Tasks
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
                 checked={filters.note}
                 onCheckedChange={() => toggleFilter('note')}
               >
                 Notes
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={filters.phase}
-                onCheckedChange={() => toggleFilter('phase')}
-              >
-                Phases
               </DropdownMenuCheckboxItem>
             </DropdownMenuContent>
           </DropdownMenu>

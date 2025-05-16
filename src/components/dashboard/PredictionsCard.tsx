@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ChartLine } from 'lucide-react';
+import { ChartLine, CalendarX } from 'lucide-react';
 
 interface PredictionsCardProps {
   harvestDate: string;
@@ -12,12 +12,16 @@ interface PredictionsCardProps {
     botrytis: string;
   };
   recommendations: string[];
+  nextPredictedPhase?: string;
+  nextPredictedDays?: string;
 }
 
 export const PredictionsCard: React.FC<PredictionsCardProps> = ({
   harvestDate,
   diseaseRisk,
-  recommendations
+  recommendations,
+  nextPredictedPhase,
+  nextPredictedDays
 }) => {
   // Update the veraison recommendation to 58 days
   const updatedRecommendations = recommendations.map(rec => {
@@ -37,10 +41,17 @@ export const PredictionsCard: React.FC<PredictionsCardProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div>
-            <h3 className="font-medium mb-1">Projected Harvest Date</h3>
+          <div className="flex justify-between items-center">
+            <h3 className="font-medium">Projected Harvest Date</h3>
             <p className="text-lg text-vineyard-burgundy font-medium">{harvestDate}</p>
           </div>
+          
+          {nextPredictedPhase && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <CalendarX className="h-4 w-4 text-vineyard-burgundy" />
+              <p>Next predicted phase: <span className="font-medium">{nextPredictedPhase}</span> around {nextPredictedDays}</p>
+            </div>
+          )}
           
           <div>
             <h3 className="font-medium mb-1">Disease Risk</h3>

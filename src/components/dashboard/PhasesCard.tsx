@@ -5,7 +5,6 @@ import { Season, PhaseEvent } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, addDays, differenceInDays } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { CalendarX } from 'lucide-react';
 
 interface PhasesCardProps {
   currentSeason: Season;
@@ -77,11 +76,21 @@ export const PhasesCard: React.FC<PhasesCardProps> = ({ currentSeason, pastSeaso
   // Check if a date is in the past
   const isInPast = (dateStr: string): boolean => {
     const date = parseISO(dateStr);
-    return date < new Date();
+    return date < new Date(2025, 4, 16); // May 16, 2025
   };
 
-  // Current date for comparison (May 16, 2025)
-  const currentDate = new Date(2025, 4, 16); // May is month 4 in JS (0-indexed)
+  // Function to get the end date for a phase
+  const getPhaseEndDate = (phase: PhaseEvent['phase']): string | null => {
+    const phaseEvent = currentSeason.events.find(e => e.phase === phase);
+    if (!phaseEvent) return null;
+    
+    // For completed phases, use actual end date if available
+    if (phase === 'budbreak') {
+      return '2025-04-11'; // hardcoded end date for bud break
+    }
+    
+    return getExpectedEndDate(phaseEvent.date, phase);
+  };
 
   return (
     <Card className="h-full">
@@ -95,6 +104,7 @@ export const PhasesCard: React.FC<PhasesCardProps> = ({ currentSeason, pastSeaso
             const phaseEvent = currentSeason.events.find(e => e.phase === phase);
             const comparisonText = getDateDifference(phase);
             const inProgress = isPhaseInProgress(phase);
+            const endDate = getPhaseEndDate(phase);
             
             if (!observed) {
               // Don't show anything for phases that haven't started yet
@@ -125,41 +135,55 @@ export const PhasesCard: React.FC<PhasesCardProps> = ({ currentSeason, pastSeaso
                 {/* Date information for observed phases */}
                 {observed && (
                   <div className="pl-6 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Start:</span>
-                      <Badge variant="outline">
-                        {format(parseISO(phaseEvent!.date), 'MMM d, yyyy')}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">End:</span>
-                      <Badge variant="outline" className="text-vineyard-burgundy">
-                        {inProgress 
-                          ? (isInPast(getExpectedEndDate(phaseEvent!.date, phase)) || phase === 'budbreak')
-                            ? getExpectedEndDate(phaseEvent!.date, phase)
-                            : `Expected: ${getExpectedEndDate(phaseEvent!.date, phase)}`
-                          : "Completed"}
-                      </Badge>
-                    </div>
-                    
-                    {comparisonText && (
-                      <div className="mt-3">
-                        <span className="text-sm font-medium text-vineyard-leaf">
-                          {comparisonText}
-                        </span>
-                      </div>
+                    {phase === 'budbreak' ? (
+                      <>
+                        <div className="flex items-center">
+                          <Badge variant="outline" className="mr-1">
+                            Mar 28 - Apr 11 2025
+                          </Badge>
+                        </div>
+                        {comparisonText && (
+                          <div>
+                            <span className="text-sm font-medium text-vineyard-leaf">
+                              {comparisonText}
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Start:</span>
+                          <Badge variant="outline">
+                            {format(parseISO(phaseEvent!.date), 'MMM d, yyyy')}
+                          </Badge>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">End:</span>
+                          <Badge variant="outline" className="text-vineyard-burgundy">
+                            {inProgress 
+                              ? (isInPast(endDate!) || phase === 'budbreak')
+                                ? format(parseISO(endDate!), 'MMM d, yyyy')
+                                : `Expected: ${format(parseISO(endDate!), 'MMM d, yyyy')}`
+                              : "Completed"}
+                          </Badge>
+                        </div>
+                        
+                        {comparisonText && (
+                          <div className="mt-1">
+                            <span className="text-sm font-medium text-vineyard-leaf">
+                              {comparisonText}
+                            </span>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
               </div>
             );
           })}
-        </div>
-        
-        <div className="mt-8 text-sm text-muted-foreground flex items-center gap-2">
-          <CalendarX className="h-4 w-4 text-vineyard-burgundy" />
-          <p>Next predicted phase: <span className="font-medium">Fruitset</span> around June 8-12</p>
         </div>
       </CardContent>
     </Card>

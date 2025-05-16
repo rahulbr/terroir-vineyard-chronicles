@@ -30,7 +30,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Grape } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
@@ -38,6 +37,15 @@ const Index = () => {
   const [activities, setActivities] = useState<ActivityItemType[]>(activityItems);
   const [selectedPhase, setSelectedPhase] = useState<PhaseEvent | null>(null);
   const { toast } = useToast();
+
+  // Find current and next phase
+  const phases: Array<PhaseEvent['phase']> = ['budbreak', 'flowering', 'fruitset', 'veraison', 'harvest'];
+  const currentPhaseEvent = currentSeason.events
+    .filter(event => phases.includes(event.phase))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+  
+  const currentPhaseIndex = phases.indexOf(currentPhaseEvent?.phase || 'budbreak');
+  const nextPhase = phases[currentPhaseIndex + 1] || phases[0];
 
   const handlePhaseClick = (phase: PhaseEvent) => {
     setSelectedPhase(phase);
@@ -80,14 +88,33 @@ const Index = () => {
       description: "Your vineyard note has been recorded."
     });
   };
+  
+  const handleRecordPhase = (phase: PhaseEvent) => {
+    const newActivity: ActivityItemType = {
+      id: `phase-${Date.now()}`,
+      type: 'phase',
+      date: phase.date,
+      title: `${phase.phase.charAt(0).toUpperCase() + phase.phase.slice(1)} phase ${
+        phase.phase === currentPhaseEvent?.phase ? 'ended' : 'started'
+      }`,
+      description: phase.notes,
+      iconType: 'phase'
+    };
+    
+    setActivities([newActivity, ...activities]);
+    
+    toast({
+      title: "Phase Recorded",
+      description: `${phase.phase.charAt(0).toUpperCase() + phase.phase.slice(1)} phase has been recorded.`
+    });
+  };
 
   return (
     <AppLayout>
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold flex items-center">
-              <Grape className="h-8 w-8 mr-2 text-vineyard-burgundy" />
+            <h1 className="text-3xl font-bold">
               Dashboard
             </h1>
             <p className="text-muted-foreground">
@@ -98,6 +125,9 @@ const Index = () => {
             blocks={vineyardBlocks} 
             onAddTask={handleAddTask}
             onAddNote={handleAddNote}
+            onRecordPhase={handleRecordPhase}
+            currentPhase={currentPhaseEvent?.phase}
+            nextPhase={nextPhase}
           />
         </div>
 
@@ -126,6 +156,8 @@ const Index = () => {
               harvestDate={predictions.harvestDate}
               diseaseRisk={predictions.diseaseRisk}
               recommendations={predictions.recommendations}
+              nextPredictedPhase="Fruitset"
+              nextPredictedDays="June 8-12"
             />
           </div>
         </div>

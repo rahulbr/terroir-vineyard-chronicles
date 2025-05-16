@@ -54,8 +54,22 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
     });
   }, [pastSeason]);
 
+  // Pre-process current season data to ensure monotonically increasing values
+  const processedCurrentSeasonData = React.useMemo(() => {
+    let maxValue = 0;
+    return currentSeason.gddData.map(point => {
+      // Ensure values only increase
+      if (point.value < maxValue) {
+        return { ...point, value: maxValue };
+      } else {
+        maxValue = point.value;
+        return point;
+      }
+    });
+  }, [currentSeason]);
+
   // Format data for the chart
-  const chartData = currentSeason.gddData.map(point => {
+  const chartData = processedCurrentSeasonData.map(point => {
     const pastYearPoint = processedPastSeasonData.find(p => 
       p.date.slice(5) === point.date.slice(5) // Compare month-day only
     );
@@ -80,8 +94,50 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
 
   // Function to find phenology stage for a specific date
   const getPhenologyStage = (date: string): string | null => {
-    const event = currentSeason.events.find(e => e.date === date);
-    return event ? event.phase : null;
+    // Map dates to phases based on the events data
+    const phaseStarts: Record<string, { phase: string, end: string | null }> = {};
+    
+    // First pass: set all phase start dates
+    currentSeason.events.forEach(event => {
+      if (['budbreak', 'flowering', 'fruitset', 'veraison', 'harvest'].includes(event.phase)) {
+        phaseStarts[event.date] = { phase: event.phase, end: null };
+      }
+    });
+    
+    // Set phase end dates
+    // We know that bud break ended on April 11
+    const budbreakEvent = currentSeason.events.find(e => e.phase === 'budbreak');
+    if (budbreakEvent) {
+      phaseStarts[budbreakEvent.date].end = '2025-04-11';
+    }
+    
+    // The rest are either still ongoing or haven't started
+    const floweringEvent = currentSeason.events.find(e => e.phase === 'flowering');
+    if (floweringEvent) {
+      phaseStarts[floweringEvent.date].end = null; // Still ongoing
+    }
+    
+    // Now determine which phase a given date belongs to
+    const dateObj = new Date(date);
+    
+    // Sort events by date
+    const sortedDates = Object.keys(phaseStarts).sort();
+    
+    for (let i = 0; i < sortedDates.length; i++) {
+      const startDate = sortedDates[i];
+      const endDate = phaseStarts[startDate].end;
+      const nextStartDate = sortedDates[i + 1];
+      
+      const isAfterStart = dateObj >= new Date(startDate);
+      const isBeforeEnd = !endDate || dateObj <= new Date(endDate);
+      const isBeforeNextPhase = !nextStartDate || dateObj < new Date(nextStartDate);
+      
+      if (isAfterStart && isBeforeEnd && isBeforeNextPhase) {
+        return phaseStarts[startDate].phase;
+      }
+    }
+    
+    return null;
   };
 
   // Custom tooltip to show both years and phenology stage if applicable
@@ -149,7 +205,7 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartData}
-            margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+            margin={{ top: 20, right: 30, left: 20, bottom: 30 }}
           >
             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
             <XAxis
@@ -219,7 +275,7 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
             ))}
           </LineChart>
         </ResponsiveContainer>
-        <div className="mt-4 text-xs text-muted-foreground flex items-center">
+        <div className="mt-2 text-xs text-muted-foreground flex items-center justify-end absolute bottom-4 right-6">
           <Info className="h-3 w-3 mr-1" />
           Weather data last updated at {format(parseISO(lastUpdated), 'MMM d, yyyy h:mm a')}
         </div>
