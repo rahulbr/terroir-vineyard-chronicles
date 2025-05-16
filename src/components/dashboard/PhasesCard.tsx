@@ -13,7 +13,7 @@ interface PhasesCardProps {
 
 export const PhasesCard: React.FC<PhasesCardProps> = ({ currentSeason, pastSeason }) => {
   // All growth phases in order
-  const allPhases = ['budbreak', 'flowering', 'fruitset', 'veraison', 'harvest'];
+  const allPhases: Array<PhaseEvent['phase']> = ['budbreak', 'flowering', 'fruitset', 'veraison', 'harvest'];
   
   // Current observed phases
   const observedPhases = currentSeason.events
@@ -21,7 +21,7 @@ export const PhasesCard: React.FC<PhasesCardProps> = ({ currentSeason, pastSeaso
     .map(event => event.phase);
   
   // Get date difference between years for the same phase
-  const getDateDifference = (phase: string): number | null => {
+  const getDateDifference = (phase: PhaseEvent['phase']): number | null => {
     const currentPhaseEvent = currentSeason.events.find(e => e.phase === phase);
     const pastPhaseEvent = pastSeason.events.find(e => e.phase === phase);
     

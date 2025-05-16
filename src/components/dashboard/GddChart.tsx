@@ -14,7 +14,7 @@ import {
   ResponsiveContainer,
   ReferenceDot,
 } from 'recharts';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 
 interface GddChartProps {
   currentSeason: Season;
@@ -65,10 +65,22 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
   // Custom tooltip to show both years
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const date = format(parseISO(label), 'MMM d, yyyy');
+      // Safely format the date - first check if it's a valid date string
+      let formattedDate = "";
+      try {
+        const dateObj = parseISO(label);
+        if (isValid(dateObj)) {
+          formattedDate = format(dateObj, 'MMM d, yyyy');
+        } else {
+          formattedDate = label; // Fallback to using the label as is
+        }
+      } catch (error) {
+        formattedDate = label; // In case of error, use label as is
+      }
+      
       return (
         <div className="bg-white p-4 shadow-md rounded-md border">
-          <p className="font-medium">{date}</p>
+          <p className="font-medium">{formattedDate}</p>
           <p className="text-vineyard-burgundy">
             {currentSeason.year}: {payload[0].value} GDD
           </p>
