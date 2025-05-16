@@ -163,9 +163,9 @@ export const PhasesCard: React.FC<PhasesCardProps> = ({ currentSeason, pastSeaso
                           <span className="text-sm text-muted-foreground">End:</span>
                           <Badge variant="outline" className="text-vineyard-burgundy">
                             {inProgress 
-                              ? (isInPast(endDate!) || phase === 'budbreak')
-                                ? format(parseISO(endDate!), 'MMM d, yyyy')
-                                : `Expected: ${format(parseISO(endDate!), 'MMM d, yyyy')}`
+                              ? (endDate && (isInPast(endDate) || phase === 'budbreak'))
+                                ? format(parseISO(endDate), 'MMM d, yyyy')
+                                : `Expected: ${endDate ? format(parseISO(endDate), 'MMM d, yyyy') : 'Unknown'}`
                               : "Completed"}
                           </Badge>
                         </div>

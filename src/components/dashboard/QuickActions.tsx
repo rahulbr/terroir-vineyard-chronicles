@@ -64,6 +64,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   // Phase form state
   const [phaseAction, setPhaseAction] = useState<'endCurrent' | 'startNext'>('endCurrent');
   const [phaseNotes, setPhaseNotes] = useState('');
+  const [phaseDate, setPhaseDate] = useState<Date | undefined>(new Date());
 
   const handleAddTask = () => {
     if (!taskTitle || !taskDate || !taskCategory || !taskBlock) {
@@ -153,9 +154,9 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     const action = phaseAction === 'endCurrent' ? 'ended' : 'started';
     
     const newPhase: PhaseEvent = {
-      id: `phase-${Date.now()}`, // Add the required id property
+      id: `phase-${Date.now()}`,
       phase: phase as any,
-      date: new Date().toISOString().split('T')[0],
+      date: phaseDate ? format(phaseDate, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0],
       notes: phaseNotes
     };
 
@@ -165,11 +166,12 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 
     toast({
       title: "Phase Recorded",
-      description: `${phase.charAt(0).toUpperCase() + phase.slice(1)} ${action} on ${format(new Date(), 'MMM d, yyyy')}.`
+      description: `${phase.charAt(0).toUpperCase() + phase.slice(1)} ${action} on ${phaseDate ? format(phaseDate, 'MMM d, yyyy') : format(new Date(), 'MMM d, yyyy')}.`
     });
 
     // Reset form
     setPhaseNotes('');
+    setPhaseDate(new Date());
     setPhaseOpen(false);
   };
 
@@ -387,6 +389,36 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
                   <SelectItem value="startNext">Start Next Phase ({nextPhase})</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="phase-date" className="text-right">
+                Date
+              </Label>
+              <div className="col-span-3">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !phaseDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {phaseDate ? format(phaseDate, 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 pointer-events-auto">
+                    <Calendar
+                      mode="single"
+                      selected={phaseDate}
+                      onSelect={setPhaseDate}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="phase-notes" className="text-right">
