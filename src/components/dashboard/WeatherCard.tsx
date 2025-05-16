@@ -12,7 +12,7 @@ interface WeatherCardProps {
 export const WeatherCard: React.FC<WeatherCardProps> = ({ weatherData }) => {
   // Get weather for today and next few days
   const todayDate = new Date().toISOString().split('T')[0];
-  const todayWeather = weatherData.find(data => data.date === todayDate);
+  const todayWeather = weatherData.find(data => data.date === todayDate) || weatherData[0];
   
   const getForecastDays = () => {
     const today = new Date();
@@ -32,10 +32,6 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({ weatherData }) => {
   };
   
   const forecast = getForecastDays();
-
-  if (!todayWeather) {
-    return <div>Loading weather data...</div>;
-  }
 
   return (
     <Card className="h-full">

@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Season, PhaseEvent, GddPoint } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import {
   ReferenceDot,
 } from 'recharts';
 import { format, parseISO, isValid } from 'date-fns';
+import { Info } from 'lucide-react';
 
 interface GddChartProps {
   currentSeason: Season;
@@ -25,6 +26,7 @@ interface GddChartProps {
 export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, onPhaseClick }) => {
   const [showPastSeason, setShowPastSeason] = React.useState(true);
   const [markerPosition, setMarkerPosition] = React.useState<GddPoint | null>(null);
+  const [lastUpdated] = useState<string>(new Date().toISOString());
   
   // Find the most recent GDD point for the current marker
   useEffect(() => {
@@ -38,9 +40,23 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
     }
   }, [currentSeason]);
 
+  // Pre-process past season data to ensure monotonically increasing values
+  const processedPastSeasonData = React.useMemo(() => {
+    let maxValue = 0;
+    return pastSeason.gddData.map(point => {
+      // Ensure values only increase
+      if (point.value < maxValue) {
+        return { ...point, value: maxValue };
+      } else {
+        maxValue = point.value;
+        return point;
+      }
+    });
+  }, [pastSeason]);
+
   // Format data for the chart
   const chartData = currentSeason.gddData.map(point => {
-    const pastYearPoint = pastSeason.gddData.find(p => 
+    const pastYearPoint = processedPastSeasonData.find(p => 
       p.date.slice(5) === point.date.slice(5) // Compare month-day only
     );
     
@@ -62,7 +78,13 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
     };
   });
 
-  // Custom tooltip to show both years
+  // Function to find phenology stage for a specific date
+  const getPhenologyStage = (date: string): string | null => {
+    const event = currentSeason.events.find(e => e.date === date);
+    return event ? event.phase : null;
+  };
+
+  // Custom tooltip to show both years and phenology stage if applicable
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       // Safely format the date - first check if it's a valid date string
@@ -77,6 +99,9 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
       } catch (error) {
         formattedDate = label; // In case of error, use label as is
       }
+
+      // Get phenology stage if available
+      const phenologyStage = getPhenologyStage(label);
       
       return (
         <div className="bg-white p-4 shadow-md rounded-md border">
@@ -89,6 +114,11 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
               {pastSeason.year}: {payload[1].value} GDD
             </p>
           )}
+          {phenologyStage && (
+            <p className="mt-2 text-vineyard-leaf font-medium capitalize">
+              {phenologyStage} phase
+            </p>
+          )}
         </div>
       );
     }
@@ -99,7 +129,7 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Growing Degree Days</CardTitle>
+          <CardTitle>Growth Curve</CardTitle>
           <p className="text-sm text-muted-foreground">
             Tracking vine development through heat accumulation
           </p>
@@ -189,6 +219,10 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
             ))}
           </LineChart>
         </ResponsiveContainer>
+        <div className="mt-4 text-xs text-muted-foreground flex items-center">
+          <Info className="h-3 w-3 mr-1" />
+          Weather data last updated at {format(parseISO(lastUpdated), 'MMM d, yyyy h:mm a')}
+        </div>
       </CardContent>
     </Card>
   );

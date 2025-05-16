@@ -19,12 +19,20 @@ export const PredictionsCard: React.FC<PredictionsCardProps> = ({
   diseaseRisk,
   recommendations
 }) => {
+  // Update the veraison recommendation to 48 days
+  const updatedRecommendations = recommendations.map(rec => {
+    if (rec.includes("veraison beginning in")) {
+      return rec.replace(/veraison beginning in \d+ days/, "veraison beginning in 48 days");
+    }
+    return rec;
+  });
+
   return (
     <Card className="h-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ChartLine className="h-5 w-5" />
-          AI Predictions & Recommendations
+          Insights and Recommendations
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -72,11 +80,11 @@ export const PredictionsCard: React.FC<PredictionsCardProps> = ({
             <Alert className="bg-vineyard-leaf/10 border-vineyard-leaf">
               <AlertTitle>Priority Action</AlertTitle>
               <AlertDescription>
-                {recommendations[0]}
+                {updatedRecommendations[0]}
               </AlertDescription>
             </Alert>
             <ul className="mt-3 space-y-2">
-              {recommendations.slice(1).map((rec, index) => (
+              {updatedRecommendations.slice(1).map((rec, index) => (
                 <li key={index} className="text-sm flex items-start gap-2">
                   <span className="text-vineyard-leaf">•</span>
                   <span>{rec}</span>

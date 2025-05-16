@@ -5,6 +5,7 @@ import { ActivityItem as ActivityItemType } from '@/types';
 import { ActivityItem } from './ActivityItem';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Activity } from 'lucide-react';
 
 interface ActivityFeedProps {
   activities: ActivityItemType[];
@@ -15,7 +16,10 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities }) => {
     <Card className="h-full">
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle>Activity Feed</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Grower's Notes
+          </CardTitle>
           <Button variant="outline" size="sm">Filter</Button>
         </div>
       </CardHeader>

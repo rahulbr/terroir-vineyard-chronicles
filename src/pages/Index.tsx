@@ -88,10 +88,10 @@ const Index = () => {
           <div>
             <h1 className="text-3xl font-bold flex items-center">
               <Grape className="h-8 w-8 mr-2 text-vineyard-burgundy" />
-              Vigneron.AI Dashboard
+              Dashboard
             </h1>
             <p className="text-muted-foreground">
-              2025 Growing Season - Château Brilliance
+              2025 Growing Season - Domaine Valeta
             </p>
           </div>
           <QuickActions 

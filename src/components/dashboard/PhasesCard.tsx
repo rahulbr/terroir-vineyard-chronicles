@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Season, PhaseEvent } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { format, parseISO, addDays } from 'date-fns';
+import { format, parseISO, addDays, differenceInDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { CalendarX } from 'lucide-react';
 
@@ -29,6 +29,27 @@ const getExpectedEndDate = (startDate: string, phase: PhaseEvent['phase']): stri
   return format(endDate, 'MMM d, yyyy');
 };
 
+// Helper to get the phase comparison text
+const getPhaseComparisonText = (currentDate: string, pastDate: string): string => {
+  const currentDateObj = parseISO(currentDate);
+  const pastDateObj = parseISO(pastDate);
+  
+  // Get current day/month and past day/month
+  const currentDayMonth = new Date(2000, currentDateObj.getMonth(), currentDateObj.getDate());
+  const pastDayMonth = new Date(2000, pastDateObj.getMonth(), pastDateObj.getDate());
+  
+  // Calculate difference in days, ignoring year
+  const diffDays = differenceInDays(currentDayMonth, pastDayMonth);
+  
+  if (diffDays === 0) {
+    return `Same timing as ${pastDateObj.getFullYear()}`;
+  } else if (diffDays < 0) {
+    return `${Math.abs(diffDays)} days later than ${pastDateObj.getFullYear()}`;
+  } else {
+    return `${diffDays} days earlier than ${pastDateObj.getFullYear()}`;
+  }
+};
+
 export const PhasesCard: React.FC<PhasesCardProps> = ({ currentSeason, pastSeason }) => {
   // All growth phases in order
   const allPhases: Array<PhaseEvent['phase']> = ['budbreak', 'flowering', 'fruitset', 'veraison', 'harvest'];
@@ -39,25 +60,24 @@ export const PhasesCard: React.FC<PhasesCardProps> = ({ currentSeason, pastSeaso
     .map(event => event.phase);
   
   // Get date difference between years for the same phase
-  const getDateDifference = (phase: PhaseEvent['phase']): number | null => {
+  const getDateDifference = (phase: PhaseEvent['phase']): string | null => {
     const currentPhaseEvent = currentSeason.events.find(e => e.phase === phase);
     const pastPhaseEvent = pastSeason.events.find(e => e.phase === phase);
     
     if (!currentPhaseEvent || !pastPhaseEvent) return null;
     
-    const currentDate = parseISO(currentPhaseEvent.date);
-    const pastDate = parseISO(pastPhaseEvent.date);
-    
-    // Calculate days difference
-    const diffTime = currentDate.getTime() - pastDate.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    return diffDays;
+    return getPhaseComparisonText(currentPhaseEvent.date, pastPhaseEvent.date);
   };
 
   // Check if a phase is currently in progress (has started but not ended)
   const isPhaseInProgress = (phase: PhaseEvent['phase']): boolean => {
     return observedPhases.includes(phase);
+  };
+
+  // Check if a date is in the past
+  const isInPast = (dateStr: string): boolean => {
+    const date = parseISO(dateStr);
+    return date < new Date();
   };
 
   return (
@@ -70,7 +90,7 @@ export const PhasesCard: React.FC<PhasesCardProps> = ({ currentSeason, pastSeaso
           {allPhases.map((phase) => {
             const observed = observedPhases.includes(phase);
             const phaseEvent = currentSeason.events.find(e => e.phase === phase);
-            const dateDiff = getDateDifference(phase);
+            const comparisonText = getDateDifference(phase);
             const inProgress = isPhaseInProgress(phase);
             
             if (!observed) {
@@ -113,28 +133,17 @@ export const PhasesCard: React.FC<PhasesCardProps> = ({ currentSeason, pastSeaso
                       <span className="text-sm text-muted-foreground">End:</span>
                       <Badge variant="outline" className="text-vineyard-burgundy">
                         {inProgress 
-                          ? `Expected: ${getExpectedEndDate(phaseEvent!.date, phase)}` 
+                          ? isInPast(getExpectedEndDate(phaseEvent!.date, phase))
+                            ? getExpectedEndDate(phaseEvent!.date, phase)
+                            : `Expected: ${getExpectedEndDate(phaseEvent!.date, phase)}`
                           : "Completed"}
                       </Badge>
                     </div>
                     
-                    {dateDiff !== null && (
-                      <div className="mt-1">
-                        <span
-                          className={cn(
-                            "text-sm font-medium",
-                            dateDiff < 0 
-                              ? "text-green-600" 
-                              : dateDiff > 0 
-                                ? "text-red-600" 
-                                : "text-gray-600"
-                          )}
-                        >
-                          {dateDiff < 0 
-                            ? `${Math.abs(dateDiff)} days earlier than ${pastSeason.year}` 
-                            : dateDiff > 0 
-                              ? `${dateDiff} days later than ${pastSeason.year}` 
-                              : `Same timing as ${pastSeason.year}`}
+                    {comparisonText && (
+                      <div className="mt-3">
+                        <span className="text-sm font-medium text-vineyard-leaf">
+                          {comparisonText}
                         </span>
                       </div>
                     )}
