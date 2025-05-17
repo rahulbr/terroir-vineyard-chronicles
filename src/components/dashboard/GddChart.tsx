@@ -477,19 +477,7 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
           </LineChart>
         </ResponsiveContainer>
         
-        {/* Legend for phenology stages */}
-        <div className="absolute bottom-8 left-6 bg-white/90 p-2 rounded-md border border-gray-200 flex flex-wrap gap-2 max-w-[50%]">
-          <div className="text-xs font-medium mb-1 w-full">Phenology Stages:</div>
-          {['budbreak', 'flowering', 'fruitset', 'veraison', 'harvest'].map((phase) => (
-            <div key={phase} className="flex items-center gap-1">
-              <div 
-                className="w-3 h-3 rounded-sm" 
-                style={{ backgroundColor: getPhaseColor(phase, true) }}
-              ></div>
-              <span className="text-xs capitalize">{phase}</span>
-            </div>
-          ))}
-        </div>
+        {/* Removed phenology stages legend box as requested */}
         
         <div className="text-xs text-muted-foreground flex items-center justify-end absolute bottom-4 right-6">
           <Info className="h-3 w-3 mr-1" />
