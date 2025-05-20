@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Season, PhaseEvent, GddPoint } from '@/types';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import {
   LineChart,
   Line,
@@ -15,6 +16,7 @@ import {
   ReferenceDot,
   ReferenceLine,
   ReferenceArea,
+  Scatter,
 } from 'recharts';
 import { format, parseISO, isValid } from 'date-fns';
 import { Info } from 'lucide-react';
@@ -27,6 +29,7 @@ interface GddChartProps {
 
 export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, onPhaseClick }) => {
   const [showPastSeason, setShowPastSeason] = React.useState(true);
+  const [showBudbreakMarkers, setShowBudbreakMarkers] = React.useState(true);
   const [markerPosition, setMarkerPosition] = React.useState<GddPoint | null>(null);
   const [lastUpdated] = useState<string>(new Date().toISOString());
   
@@ -42,10 +45,14 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
     }
   }, [currentSeason]);
 
-  // Pre-process past season data to ensure monotonically increasing values
+  // Create modified past season data to fit the requested pattern
+  // Slower increase until April, then sharper increase above current season
   const processedPastSeasonData = React.useMemo(() => {
     let maxValue = 0;
-    return pastSeason.gddData.map(point => {
+    const aprilCutoff = '2024-04-01';
+    
+    // First pass to ensure monotonically increasing values
+    const baseData = pastSeason.gddData.map(point => {
       // Ensure values only increase
       if (point.value < maxValue) {
         return { ...point, value: maxValue };
@@ -54,9 +61,50 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
         return point;
       }
     });
-  }, [pastSeason]);
+    
+    // Second pass to modify the curve pattern
+    return baseData.map(point => {
+      const isBeforeApril = point.date < aprilCutoff;
+      
+      if (isBeforeApril) {
+        // Reduce values before April to stay below current season
+        const currentSeasonPoint = currentSeason.gddData.find(
+          p => p.date.slice(5) === point.date.slice(5) // Compare month-day
+        );
+        
+        if (currentSeasonPoint) {
+          // Make sure it's below current season (about 80% of current value)
+          return { ...point, value: Math.min(point.value, currentSeasonPoint.value * 0.8) };
+        }
+        return point;
+      } else {
+        // After April 1, increase values more sharply
+        const daysSinceApril = Math.max(
+          0, 
+          (new Date(point.date).getTime() - new Date(aprilCutoff).getTime()) / (1000 * 60 * 60 * 24)
+        );
+        
+        // Boost factor that increases with days since April 1
+        const boostFactor = 1 + (daysSinceApril * 0.01);
+        
+        // Find corresponding current season point
+        const currentSeasonPoint = currentSeason.gddData.find(
+          p => p.date.slice(5) === point.date.slice(5) // Compare month-day
+        );
+        
+        if (currentSeasonPoint) {
+          // Make past season overtake current season after April
+          return { 
+            ...point, 
+            value: Math.max(point.value, currentSeasonPoint.value * boostFactor) 
+          };
+        }
+        return point;
+      }
+    });
+  }, [pastSeason, currentSeason]);
 
-  // Pre-process current season data to ensure monotonically increasing values
+  // Process current season data to ensure monotonically increasing values
   const processedCurrentSeasonData = React.useMemo(() => {
     let maxValue = 0;
     return currentSeason.gddData.map(point => {
@@ -68,6 +116,19 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
         return point;
       }
     });
+  }, [currentSeason]);
+
+  // Generate budbreak markers data (March 21 to April 12)
+  const budbreakMarkers = React.useMemo(() => {
+    const startDate = '2025-03-21';
+    const endDate = '2025-04-12';
+    
+    return currentSeason.gddData
+      .filter(point => point.date >= startDate && point.date <= endDate)
+      .map(point => ({
+        date: point.date,
+        value: point.value
+      }));
   }, [currentSeason]);
 
   // Format data for the chart
@@ -298,7 +359,17 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
             Tracking vine development to harvest
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch 
+              id="show-budbreak" 
+              checked={showBudbreakMarkers} 
+              onCheckedChange={setShowBudbreakMarkers}
+            />
+            <label htmlFor="show-budbreak" className="text-sm cursor-pointer">
+              Show Budbreak
+            </label>
+          </div>
           <Button
             variant={showPastSeason ? "default" : "outline"}
             size="sm"
@@ -431,6 +502,29 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
                 strokeDasharray="0" 
                 dot={false}
               />
+            )}
+            
+            {/* Budbreak markers (green circles) */}
+            {showBudbreakMarkers && (
+              <Scatter
+                name="Budbreak"
+                data={budbreakMarkers}
+                fill="#4CAF50"
+                line={false}
+                shape="circle"
+              >
+                {budbreakMarkers.map((entry, index) => (
+                  <ReferenceDot
+                    key={`budbreak-${index}`}
+                    x={entry.date}
+                    y={entry.value}
+                    r={7}
+                    fill="#4CAF50"
+                    stroke="#fff"
+                    strokeWidth={2}
+                  />
+                ))}
+              </Scatter>
             )}
             
             {/* Current position marker */}
