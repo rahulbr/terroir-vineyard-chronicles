@@ -17,6 +17,7 @@ import {
   ReferenceLine,
   ReferenceArea,
   Scatter,
+  Area
 } from 'recharts';
 import { format, parseISO, isValid } from 'date-fns';
 import { Info } from 'lucide-react';
@@ -127,20 +128,26 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
       .filter(point => point.date >= startDate && point.date <= endDate)
       .map(point => ({
         date: point.date,
-        value: point.value
+        value: point.value,
+        budbreak: point.value // Add this property for the budbreak area chart
       }));
   }, [currentSeason]);
 
   // Format data for the chart
   const chartData = processedCurrentSeasonData.map(point => {
     const pastYearPoint = processedPastSeasonData.find(p => 
-      p.date.slice(5) === point.date.slice(5) // Compare month-day only
+      p.date.slice(5) === point.date.slice(5) // Compare month-day
     );
+    
+    // Check if this point is in the budbreak period
+    const isBudbreak = budbreakMarkers.some(bm => bm.date === point.date);
     
     return {
       date: point.date,
       current: point.value,
       past: pastYearPoint ? pastYearPoint.value : null,
+      // Add budbreak value only for points in the budbreak period
+      budbreak: isBudbreak ? point.value : null,
       formattedDate: format(new Date(point.date), 'MMM d')  // Using new Date() for safer parsing
     };
   });
@@ -323,6 +330,9 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
         }
       }
       
+      // Check if this is a budbreak point
+      const isBudbreak = showBudbreakMarkers && budbreakMarkers.some(marker => marker.date === label);
+      
       return (
         <div className="bg-white p-4 shadow-md rounded-md border">
           <p className="font-medium">{formattedDate}</p>
@@ -332,6 +342,11 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
           {showPastSeason && payload[1] && payload[1].value && (
             <p className="text-purple-600">
               {pastSeason.year}: {payload[1].value} GDD
+            </p>
+          )}
+          {isBudbreak && (
+            <p className="text-emerald-600 font-bold">
+              Budbreak period
             </p>
           )}
           {phenologyStage && (
@@ -366,8 +381,9 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
               checked={showBudbreakMarkers} 
               onCheckedChange={setShowBudbreakMarkers}
             />
-            <label htmlFor="show-budbreak" className="text-sm cursor-pointer">
-              Show Budbreak
+            <label htmlFor="show-budbreak" className="text-sm cursor-pointer flex items-center gap-1">
+              <span className="inline-block w-3 h-3 bg-emerald-500 rounded-full"></span>
+              Budbreak
             </label>
           </div>
           <Button
@@ -504,28 +520,32 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
               />
             )}
             
-            {/* Budbreak markers (green circles) */}
+            {/* Budbreak highlight area */}
             {showBudbreakMarkers && (
-              <Scatter
-                name="Budbreak"
-                data={budbreakMarkers}
-                fill="#4CAF50"
-                line={false}
-                shape="circle"
-              >
-                {budbreakMarkers.map((entry, index) => (
-                  <ReferenceDot
-                    key={`budbreak-${index}`}
-                    x={entry.date}
-                    y={entry.value}
-                    r={7}
-                    fill="#4CAF50"
-                    stroke="#fff"
-                    strokeWidth={2}
-                  />
-                ))}
-              </Scatter>
+              <Area
+                type="monotone"
+                dataKey="budbreak"
+                name="Budbreak Period"
+                stroke="#4CAF50"
+                fill="#4CAF5033"
+                fillOpacity={0.5}
+                activeDot={false}
+                legendType="none"
+              />
             )}
+            
+            {/* Improved Budbreak markers (green circles) */}
+            {showBudbreakMarkers && budbreakMarkers.map((entry, index) => (
+              <ReferenceDot
+                key={`budbreak-${index}`}
+                x={entry.date}
+                y={entry.value}
+                r={8}
+                fill="#4CAF50"
+                stroke="#FFFFFF"
+                strokeWidth={2}
+              />
+            ))}
             
             {/* Current position marker */}
             {markerPosition && (
@@ -570,8 +590,6 @@ export const GddChart: React.FC<GddChartProps> = ({ currentSeason, pastSeason, o
             ))}
           </LineChart>
         </ResponsiveContainer>
-        
-        {/* Removed phenology stages legend box as requested */}
         
         <div className="text-xs text-muted-foreground flex items-center justify-end absolute bottom-4 right-6">
           <Info className="h-3 w-3 mr-1" />
