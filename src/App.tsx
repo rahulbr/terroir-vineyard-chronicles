@@ -10,6 +10,7 @@ import Tasks from "./pages/Tasks";
 import Notes from "./pages/Notes";
 import Vineyard from "./pages/Vineyard";
 import Settings from "./pages/Settings";
+import GrowthCurve from "./pages/GrowthCurve";
 import NotFound from "./pages/NotFound";
 import { BertinProvider } from "./components/bertin/BertinProvider";
 
@@ -24,6 +25,7 @@ const App = () => (
         <BertinProvider>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/growth-curve" element={<GrowthCurve />} />
             <Route path="/blocks" element={<Blocks />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/notes" element={<Notes />} />

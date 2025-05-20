@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { TreeDeciduous, MapPin, Book, Calendar, Settings, ChartLine } from 'lucide-react';
+import { TreeDeciduous, MapPin, Book, Calendar, Settings, BarChart, LineChart } from 'lucide-react';
 import { useBertin } from '@/components/bertin/BertinProvider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -10,7 +10,12 @@ const navItems = [
   {
     name: 'Dashboard',
     path: '/',
-    icon: <ChartLine className="h-5 w-5" />,
+    icon: <BarChart className="h-5 w-5" />,
+  },
+  {
+    name: 'Growth Curve',
+    path: '/growth-curve',
+    icon: <LineChart className="h-5 w-5" />,
   },
   {
     name: 'Blocks',
