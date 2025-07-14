@@ -26,9 +26,11 @@ import { cn } from '@/lib/utils';
 import { TaskItem, NoteItem, VineyardBlock, PhaseEvent } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { createTask, saveObservation, createPhenologyEvent } from '@/integrations/supabase/api';
 
 interface QuickActionsProps {
   blocks: VineyardBlock[];
+  vineyardId?: string;
   onAddTask?: (task: TaskItem) => void;
   onAddNote?: (note: NoteItem) => void;
   onRecordPhase?: (phase: PhaseEvent) => void;
@@ -38,6 +40,7 @@ interface QuickActionsProps {
 
 export const QuickActions: React.FC<QuickActionsProps> = ({ 
   blocks, 
+  vineyardId,
   onAddTask, 
   onAddNote, 
   onRecordPhase,
@@ -66,7 +69,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   const [phaseNotes, setPhaseNotes] = useState('');
   const [phaseDate, setPhaseDate] = useState<Date | undefined>(new Date());
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (!taskTitle || !taskDate || !taskCategory || !taskBlock) {
       toast({
         title: "Missing Fields",
@@ -76,35 +79,61 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       return;
     }
 
-    const newTask: TaskItem = {
-      id: `task-${Date.now()}`,
-      title: taskTitle,
-      description: taskDescription,
-      blockId: taskBlock,
-      date: format(taskDate, 'yyyy-MM-dd'),
-      completed: false,
-      category: taskCategory as any,
-    };
-
-    if (onAddTask) {
-      onAddTask(newTask);
+    if (!vineyardId) {
+      toast({
+        title: "Error",
+        description: "No vineyard selected. Please select a vineyard first.",
+        variant: "destructive"
+      });
+      return;
     }
 
-    toast({
-      title: "Task Created",
-      description: `${taskTitle} has been added to your tasks.`
-    });
+    try {
+      await createTask({
+        vineyard_id: vineyardId,
+        title: taskTitle,
+        description: taskDescription,
+        due_date: format(taskDate, 'yyyy-MM-dd'),
+        priority: 'medium'
+      });
 
-    // Reset form
-    setTaskTitle('');
-    setTaskDescription('');
-    setTaskDate(new Date());
-    setTaskCategory('');
-    setTaskBlock('');
-    setTaskNoteOpen(false);
+      const newTask: TaskItem = {
+        id: `task-${Date.now()}`,
+        title: taskTitle,
+        description: taskDescription,
+        blockId: taskBlock,
+        date: format(taskDate, 'yyyy-MM-dd'),
+        completed: false,
+        category: taskCategory as any,
+      };
+
+      if (onAddTask) {
+        onAddTask(newTask);
+      }
+
+      toast({
+        title: "Task Created",
+        description: `${taskTitle} has been saved to the database.`
+      });
+
+      // Reset form
+      setTaskTitle('');
+      setTaskDescription('');
+      setTaskDate(new Date());
+      setTaskCategory('');
+      setTaskBlock('');
+      setTaskNoteOpen(false);
+    } catch (error) {
+      console.error('Error creating task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create task. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (!noteContent || !noteBlock) {
       toast({
         title: "Missing Fields",
@@ -114,33 +143,58 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       return;
     }
 
-    const tags = noteTags.split(',').map(tag => tag.trim()).filter(tag => tag);
-
-    const newNote: NoteItem = {
-      id: `note-${Date.now()}`,
-      content: noteContent,
-      date: new Date().toISOString().split('T')[0],
-      blockId: noteBlock,
-      tags: tags.length > 0 ? tags : ['general'],
-    };
-
-    if (onAddNote) {
-      onAddNote(newNote);
+    if (!vineyardId) {
+      toast({
+        title: "Error",
+        description: "No vineyard selected. Please select a vineyard first.",
+        variant: "destructive"
+      });
+      return;
     }
 
-    toast({
-      title: "Note Created",
-      description: "Your note has been saved."
-    });
+    const tags = noteTags.split(',').map(tag => tag.trim()).filter(tag => tag);
 
-    // Reset form
-    setNoteContent('');
-    setNoteTags('');
-    setNoteBlock('');
-    setTaskNoteOpen(false);
+    try {
+      await saveObservation({
+        vineyard_id: vineyardId,
+        content: noteContent,
+        observation_type: 'note',
+        location_notes: `Block: ${noteBlock}`,
+      });
+
+      const newNote: NoteItem = {
+        id: `note-${Date.now()}`,
+        content: noteContent,
+        date: new Date().toISOString().split('T')[0],
+        blockId: noteBlock,
+        tags: tags.length > 0 ? tags : ['general'],
+      };
+
+      if (onAddNote) {
+        onAddNote(newNote);
+      }
+
+      toast({
+        title: "Note Created",
+        description: "Your note has been saved to the database."
+      });
+
+      // Reset form
+      setNoteContent('');
+      setNoteTags('');
+      setNoteBlock('');
+      setTaskNoteOpen(false);
+    } catch (error) {
+      console.error('Error creating note:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create note. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleRecordPhase = () => {
+  const handleRecordPhase = async () => {
     if (!phaseNotes) {
       toast({
         title: "Missing Fields",
@@ -150,29 +204,54 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       return;
     }
 
+    if (!vineyardId) {
+      toast({
+        title: "Error",
+        description: "No vineyard selected. Please select a vineyard first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const phase = phaseAction === 'endCurrent' ? currentPhase : nextPhase;
     const action = phaseAction === 'endCurrent' ? 'ended' : 'started';
     
-    const newPhase: PhaseEvent = {
-      id: `phase-${Date.now()}`,
-      phase: phase as any,
-      date: phaseDate ? format(phaseDate, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0],
-      notes: phaseNotes
-    };
+    try {
+      await createPhenologyEvent({
+        vineyard_id: vineyardId,
+        event_type: phase,
+        event_date: phaseDate ? format(phaseDate, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0],
+        notes: phaseNotes
+      });
 
-    if (onRecordPhase) {
-      onRecordPhase(newPhase);
+      const newPhase: PhaseEvent = {
+        id: `phase-${Date.now()}`,
+        phase: phase as any,
+        date: phaseDate ? format(phaseDate, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0],
+        notes: phaseNotes
+      };
+
+      if (onRecordPhase) {
+        onRecordPhase(newPhase);
+      }
+
+      toast({
+        title: "Phase Recorded",
+        description: `${phase.charAt(0).toUpperCase() + phase.slice(1)} ${action} has been saved to the database.`
+      });
+
+      // Reset form
+      setPhaseNotes('');
+      setPhaseDate(new Date());
+      setPhaseOpen(false);
+    } catch (error) {
+      console.error('Error recording phase:', error);
+      toast({
+        title: "Error",
+        description: "Failed to record phase. Please try again.",
+        variant: "destructive"
+      });
     }
-
-    toast({
-      title: "Phase Recorded",
-      description: `${phase.charAt(0).toUpperCase() + phase.slice(1)} ${action} on ${phaseDate ? format(phaseDate, 'MMM d, yyyy') : format(new Date(), 'MMM d, yyyy')}.`
-    });
-
-    // Reset form
-    setPhaseNotes('');
-    setPhaseDate(new Date());
-    setPhaseOpen(false);
   };
 
   return (

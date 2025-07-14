@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { NewVineyardForm } from '@/components/vineyard/NewVineyardForm';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { getUserVineyards, createVineyard } from '@/integrations/supabase/api';
 
 interface VineyardSite {
   id: string;
@@ -42,26 +44,125 @@ const defaultVineyardSites: VineyardSite[] = [
 ];
 
 export const VineyardSettings: React.FC = () => {
-  const [vineyardSites, setVineyardSites] = useState<VineyardSite[]>(defaultVineyardSites);
-  const [selectedVineyard, setSelectedVineyard] = useState(vineyardSites[0].id);
+  const [vineyardSites, setVineyardSites] = useState<VineyardSite[]>([]);
+  const [selectedVineyard, setSelectedVineyard] = useState('');
   const [showNewVineyardForm, setShowNewVineyardForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
   
+  // Load vineyards on component mount
+  useEffect(() => {
+    const loadVineyards = async () => {
+      try {
+        const vineyards = await getUserVineyards();
+        
+        // Convert Supabase data to VineyardSite format
+        const formattedVineyards: VineyardSite[] = [
+          ...defaultVineyardSites,
+          ...vineyards.map(v => ({
+            id: v.id,
+            name: v.name,
+            location: v.location,
+            address: v.address || v.location,
+            description: `Vineyard location at ${v.location}`,
+            latitude: v.latitude ? Number(v.latitude) : undefined,
+            longitude: v.longitude ? Number(v.longitude) : undefined,
+          }))
+        ];
+        
+        setVineyardSites(formattedVineyards);
+        if (formattedVineyards.length > 0) {
+          setSelectedVineyard(formattedVineyards[0].id);
+        }
+      } catch (error) {
+        console.error('Error loading vineyards:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load vineyards. Using defaults.",
+          variant: "destructive"
+        });
+        setVineyardSites(defaultVineyardSites);
+        setSelectedVineyard(defaultVineyardSites[0].id);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadVineyards();
+  }, [toast]);
+
   const currentVineyard = vineyardSites.find(site => site.id === selectedVineyard) || vineyardSites[0];
 
   const handleNewVineyard = async (newVineyard: { name: string; address: string; latitude: number; longitude: number }) => {
-    const vineyardSite: VineyardSite = {
-      id: `vineyard-${Date.now()}`,
-      name: newVineyard.name,
-      location: newVineyard.address.split(',').slice(-2).join(',').trim(), // Extract city, state
-      address: newVineyard.address,
-      description: `Custom vineyard location at ${newVineyard.address}`,
-      latitude: newVineyard.latitude,
-      longitude: newVineyard.longitude
-    };
-    
-    setVineyardSites(prev => [...prev, vineyardSite]);
-    setSelectedVineyard(vineyardSite.id);
-    setShowNewVineyardForm(false);
+    try {
+      const savedVineyard = await createVineyard({
+        name: newVineyard.name,
+        location: newVineyard.address,
+        latitude: newVineyard.latitude,
+        longitude: newVineyard.longitude
+      });
+
+      const vineyardSite: VineyardSite = {
+        id: savedVineyard[0].id,
+        name: savedVineyard[0].name,
+        location: savedVineyard[0].location,
+        address: savedVineyard[0].address || savedVineyard[0].location,
+        description: `Vineyard location at ${savedVineyard[0].location}`,
+        latitude: savedVineyard[0].latitude ? Number(savedVineyard[0].latitude) : undefined,
+        longitude: savedVineyard[0].longitude ? Number(savedVineyard[0].longitude) : undefined,
+      };
+      
+      setVineyardSites(prev => [...prev, vineyardSite]);
+      setSelectedVineyard(vineyardSite.id);
+      setShowNewVineyardForm(false);
+      
+      toast({
+        title: "Success",
+        description: "Vineyard saved successfully!"
+      });
+    } catch (error) {
+      console.error('Error saving vineyard:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save vineyard. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteVineyard = async (vineyardId: string) => {
+    // Prevent deletion of design partner vineyards
+    if (vineyardId === 'clos-de-la-tech' || vineyardId === 'thomas-fogarty') {
+      toast({
+        title: "Cannot Delete",
+        description: "Design partner vineyards cannot be deleted.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Remove from local state (you could add Supabase delete here if needed)
+      setVineyardSites(prev => prev.filter(site => site.id !== vineyardId));
+      
+      // If we deleted the currently selected vineyard, select the first one
+      if (selectedVineyard === vineyardId && vineyardSites.length > 1) {
+        const remaining = vineyardSites.filter(site => site.id !== vineyardId);
+        setSelectedVineyard(remaining[0].id);
+      }
+      
+      toast({
+        title: "Success",
+        description: "Vineyard deleted successfully."
+      });
+    } catch (error) {
+      console.error('Error deleting vineyard:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete vineyard.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleVineyardChange = (value: string) => {
@@ -71,6 +172,16 @@ export const VineyardSettings: React.FC = () => {
       setSelectedVineyard(value);
     }
   };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center">Loading vineyards...</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (showNewVineyardForm) {
     return (
@@ -96,9 +207,21 @@ export const VineyardSettings: React.FC = () => {
                 <SelectContent>
                   {vineyardSites.map((site) => (
                     <SelectItem key={site.id} value={site.id}>
-                      <div className="flex flex-col">
+                      <div className="flex items-center justify-between w-full">
                         <span className="font-medium">{site.name}</span>
-                        <span className="text-sm text-muted-foreground">{site.location}</span>
+                        {site.id !== 'clos-de-la-tech' && site.id !== 'thomas-fogarty' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteVineyard(site.id);
+                            }}
+                            className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
                       </div>
                     </SelectItem>
                   ))}

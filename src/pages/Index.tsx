@@ -163,6 +163,7 @@ const Index = () => {
           </div>
           <QuickActions 
             blocks={vineyardBlocks} 
+            vineyardId={currentVineyard.id}
             onAddTask={handleAddTask}
             onAddNote={handleAddNote}
             onRecordPhase={handleRecordPhase}
@@ -192,6 +193,7 @@ const Index = () => {
             onAddTask={handleAddTask}
             onAddNote={handleAddNote}
             blocks={vineyardBlocks}
+            vineyardId={currentVineyard.id}
           />
         </div>
       </div>
