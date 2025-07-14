@@ -1,10 +1,9 @@
+
 import React, { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { WeatherDashboard } from '@/components/weather/WeatherDashboard';
-import { PhasesCard } from '@/components/dashboard/PhasesCard';
 import { PredictionsCard } from '@/components/dashboard/PredictionsCard';
 import { ActivityFeed } from '@/components/activityFeed/ActivityFeed';
-import { QuickActions } from '@/components/dashboard/QuickActions';
 import { 
   currentSeason, 
   pastSeason, 
@@ -161,14 +160,6 @@ const Index = () => {
               Track growing degree days and weather conditions for your vineyard
             </p>
           </div>
-          <QuickActions 
-            blocks={vineyardBlocks} 
-            onAddTask={handleAddTask}
-            onAddNote={handleAddNote}
-            onRecordPhase={handleRecordPhase}
-            currentPhase={currentPhaseEvent?.phase}
-            nextPhase={nextPhase}
-          />
         </div>
 
         {/* Weather Dashboard - Main Feature */}
@@ -185,19 +176,9 @@ const Index = () => {
           />
         </div>
 
-        {/* Growth Phases side panel */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="md:col-span-1">
-            <PhasesCard 
-              currentSeason={currentSeasonData}
-              pastSeason={pastSeason}
-            />
-          </div>
-          
-          {/* Activity Feed takes remaining space */}
-          <div className="md:col-span-3">
-            <ActivityFeed activities={activities} />
-          </div>
+        {/* Activity Feed takes full width */}
+        <div>
+          <ActivityFeed activities={activities} />
         </div>
       </div>
 
