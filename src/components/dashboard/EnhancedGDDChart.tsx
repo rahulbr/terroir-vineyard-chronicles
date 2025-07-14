@@ -181,7 +181,7 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Enhanced Growth Curve</CardTitle>
+          <CardTitle>Growth Curve</CardTitle>
           <p className="text-sm text-muted-foreground">
             Click on the chart to add phenology events
           </p>
@@ -312,38 +312,48 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
             />
 
             {/* Phenology event markers */}
-            {phenologyEvents.map((event) => (
-              <ReferenceDot
-                key={event.id}
-                x={format(new Date(event.date), 'MMM d')}
-                y={event.gdd}
-                r={6}
-                fill={getPhaseColor(event.phase)}
-                stroke="white"
-                strokeWidth={2}
-                onClick={() => onPhaseClick({
-                  id: event.id,
-                  date: event.date,
-                  phase: event.phase as any,
-                  notes: event.notes
-                })}
-              />
-            ))}
+            {phenologyEvents.map((event) => {
+              const chartPoint = chartData.find(point => point.date === event.date);
+              if (!chartPoint) return null;
+              
+              return (
+                <ReferenceDot
+                  key={event.id}
+                  x={chartPoint.formattedDate}
+                  y={event.gdd}
+                  r={6}
+                  fill={getPhaseColor(event.phase)}
+                  stroke="white"
+                  strokeWidth={2}
+                  onClick={() => onPhaseClick({
+                    id: event.id,
+                    date: event.date,
+                    phase: event.phase as any,
+                    notes: event.notes
+                  })}
+                />
+              );
+            })}
 
             {/* Phase labels */}
-            {phenologyEvents.map((event) => (
-              <ReferenceLine
-                key={`label-${event.id}`}
-                x={format(new Date(event.date), 'MMM d')}
-                stroke="none"
-                label={{
-                  value: event.phase,
-                  position: 'top',
-                  fill: getPhaseColor(event.phase),
-                  fontSize: 10
-                }}
-              />
-            ))}
+            {phenologyEvents.map((event) => {
+              const chartPoint = chartData.find(point => point.date === event.date);
+              if (!chartPoint) return null;
+              
+              return (
+                <ReferenceLine
+                  key={`label-${event.id}`}
+                  x={chartPoint.formattedDate}
+                  stroke="none"
+                  label={{
+                    value: event.phase,
+                    position: 'top',
+                    fill: getPhaseColor(event.phase),
+                    fontSize: 10
+                  }}
+                />
+              );
+            })}
           </ComposedChart>
         </ResponsiveContainer>
         
