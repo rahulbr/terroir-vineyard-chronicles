@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,8 @@ interface EnhancedGDDChartProps {
 
 interface PhenologyEvent {
   id: string;
-  date: string;
+  startDate: string;
+  endDate: string;
   phase: string;
   gdd: number;
   notes: string;
@@ -37,7 +39,8 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
   const [phenologyEvents, setPhenologyEvents] = useState<PhenologyEvent[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newEvent, setNewEvent] = useState({
-    date: new Date(),
+    startDate: new Date(),
+    endDate: new Date(),
     phase: '',
     notes: '',
     block: ''
@@ -93,7 +96,8 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
     if (dataIndex >= 0 && dataIndex < chartData.length) {
       const clickedDate = new Date(chartData[dataIndex].date);
       setNewEvent({
-        date: clickedDate,
+        startDate: clickedDate,
+        endDate: clickedDate,
         phase: '',
         notes: '',
         block: ''
@@ -113,12 +117,23 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
       return;
     }
 
-    const dateStr = format(newEvent.date, 'yyyy-MM-dd');
-    const gddAtDate = processedCurrentSeasonData.find(point => point.date === dateStr)?.value || 0;
+    if (!newEvent.startDate || !newEvent.endDate) {
+      toast({
+        title: "Error",
+        description: "Please select both start and end dates",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const startDateStr = format(newEvent.startDate, 'yyyy-MM-dd');
+    const endDateStr = format(newEvent.endDate, 'yyyy-MM-dd');
+    const gddAtDate = processedCurrentSeasonData.find(point => point.date === startDateStr)?.value || 0;
 
     const event: PhenologyEvent = {
       id: `event-${Date.now()}`,
-      date: dateStr,
+      startDate: startDateStr,
+      endDate: endDateStr,
       phase: newEvent.phase,
       gdd: gddAtDate,
       notes: newEvent.notes,
@@ -128,15 +143,20 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
     setPhenologyEvents(prev => [...prev, event]);
     setIsDialogOpen(false);
     setNewEvent({
-      date: new Date(),
+      startDate: new Date(),
+      endDate: new Date(),
       phase: '',
       notes: '',
       block: ''
     });
 
+    const dateRange = startDateStr === endDateStr 
+      ? format(newEvent.startDate, 'MMM d')
+      : `${format(newEvent.startDate, 'MMM d')} - ${format(newEvent.endDate, 'MMM d')}`;
+
     toast({
       title: "Event Added",
-      description: `${newEvent.phase} event recorded for ${format(newEvent.date, 'MMM d')}`
+      description: `${newEvent.phase} event recorded for ${dateRange}`
     });
   };
 
@@ -166,6 +186,17 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
     return emojis[phase as keyof typeof emojis] || '📍';
   };
 
+  // Handle start date change and update end date
+  const handleStartDateChange = (date: Date | undefined) => {
+    if (date) {
+      setNewEvent(prev => ({
+        ...prev,
+        startDate: date,
+        endDate: date // Default end date to same as start date
+      }));
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -188,25 +219,52 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="date">Date</Label>
+                <Label htmlFor="start-date">Start Date *</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       className={cn(
                         "w-full justify-start text-left font-normal",
-                        !newEvent.date && "text-muted-foreground"
+                        !newEvent.startDate && "text-muted-foreground"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {newEvent.date ? format(newEvent.date, "PPP") : <span>Pick a date</span>}
+                      {newEvent.startDate ? format(newEvent.startDate, "PPP") : <span>Pick start date</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
                     <Calendar
                       mode="single"
-                      selected={newEvent.date}
-                      onSelect={(date) => date && setNewEvent({...newEvent, date})}
+                      selected={newEvent.startDate}
+                      onSelect={handleStartDateChange}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div>
+                <Label htmlFor="end-date">End Date *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !newEvent.endDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newEvent.endDate ? format(newEvent.endDate, "PPP") : <span>Pick end date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={newEvent.endDate}
+                      onSelect={(date) => date && setNewEvent({...newEvent, endDate: date})}
                       initialFocus
                       className="pointer-events-auto"
                     />
@@ -215,7 +273,7 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
               </div>
               
               <div>
-                <Label htmlFor="phase">Phenology Phase</Label>
+                <Label htmlFor="phase">Phenology Phase *</Label>
                 <Select onValueChange={(value) => setNewEvent({...newEvent, phase: value})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select phase" />
@@ -351,28 +409,57 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
 
             {/* Phenology Events */}
             {phenologyEvents.map((event, index) => {
-              const dataIndex = chartData.findIndex(d => d.date === event.date);
-              if (dataIndex === -1) return null;
+              const startDataIndex = chartData.findIndex(d => d.date === event.startDate);
+              const endDataIndex = chartData.findIndex(d => d.date === event.endDate);
+              
+              if (startDataIndex === -1) return null;
 
-              const x = padding + (dataIndex / (chartData.length - 1)) * (width - 2 * padding);
+              const startX = padding + (startDataIndex / (chartData.length - 1)) * (width - 2 * padding);
+              const endX = endDataIndex !== -1 ? padding + (endDataIndex / (chartData.length - 1)) * (width - 2 * padding) : startX;
               const color = getPhaseColor(event.phase);
               const emoji = getPhaseEmoji(event.phase);
 
               return (
                 <g key={index}>
-                  {/* Vertical line */}
+                  {/* Date range background (if multi-day event) */}
+                  {startX !== endX && (
+                    <rect
+                      x={startX}
+                      y={padding}
+                      width={endX - startX}
+                      height={height - 2 * padding}
+                      fill={color}
+                      opacity="0.1"
+                    />
+                  )}
+                  
+                  {/* Vertical line at start */}
                   <line
-                    x1={x}
+                    x1={startX}
                     y1={padding}
-                    x2={x}
+                    x2={startX}
                     y2={height - padding}
                     stroke={color}
                     strokeWidth="3"
                     strokeDasharray="5,5"
                   />
+                  
+                  {/* Vertical line at end (if different from start) */}
+                  {startX !== endX && (
+                    <line
+                      x1={endX}
+                      y1={padding}
+                      x2={endX}
+                      y2={height - padding}
+                      stroke={color}
+                      strokeWidth="3"
+                      strokeDasharray="5,5"
+                    />
+                  )}
+                  
                   {/* Event marker */}
                   <circle
-                    cx={x}
+                    cx={startX}
                     cy={padding - 15}
                     r="8"
                     fill={color}
@@ -381,14 +468,14 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
                     style={{ cursor: 'pointer' }}
                     onClick={() => onPhaseClick({
                       id: event.id,
-                      date: event.date,
+                      date: event.startDate,
                       phase: event.phase as any,
                       notes: event.notes
                     })}
                   />
                   {/* Event emoji */}
                   <text
-                    x={x}
+                    x={startX}
                     y={padding - 10}
                     textAnchor="middle"
                     fontSize="12"
@@ -439,18 +526,24 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
           <div className="mt-4 p-4 bg-muted rounded-lg">
             <h4 className="font-medium mb-2">Recorded Events ({phenologyEvents.length})</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-              {phenologyEvents.map((event) => (
-                <div key={event.id} className="flex items-center space-x-2 text-sm">
-                  <div 
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: getPhaseColor(event.phase) }}
-                  />
-                  <span className="font-medium">{event.phase}</span>
-                  <span className="text-muted-foreground">
-                    {format(new Date(event.date), 'MMM d')}
-                  </span>
-                </div>
-              ))}
+              {phenologyEvents.map((event) => {
+                const dateRange = event.startDate === event.endDate 
+                  ? format(new Date(event.startDate), 'MMM d')
+                  : `${format(new Date(event.startDate), 'MMM d')} - ${format(new Date(event.endDate), 'MMM d')}`;
+                
+                return (
+                  <div key={event.id} className="flex items-center space-x-2 text-sm">
+                    <div 
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: getPhaseColor(event.phase) }}
+                    />
+                    <span className="font-medium">{event.phase}</span>
+                    <span className="text-muted-foreground">
+                      {dateRange}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
