@@ -12,20 +12,6 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, Plus } from 'lucide-react';
 import { format } from 'date-fns';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  ReferenceDot,
-  ReferenceLine,
-  Area,
-  ComposedChart
-} from 'recharts';
 import { Season, PhaseEvent, GddPoint } from '@/types';
 
 interface EnhancedGDDChartProps {
@@ -71,27 +57,41 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
     });
   }, [currentSeason]);
 
-  // Chart data with phenology events
-  const chartData = processedCurrentSeasonData.map(point => {
-    const dateStr = point.date;
-    const eventAtDate = phenologyEvents.find(e => e.date === dateStr);
-    
-    return {
-      date: point.date,
-      gdd: point.value,
-      formattedDate: format(new Date(point.date), 'MMM d'),
-      hasEvent: !!eventAtDate,
-      eventPhase: eventAtDate?.phase || null
-    };
-  });
+  // Chart dimensions
+  const width = 800;
+  const height = 350;
+  const padding = 60;
+
+  // Create chart data
+  const chartData = processedCurrentSeasonData.map(point => ({
+    date: point.date,
+    cumulativeGDD: point.value,
+    formattedDate: format(new Date(point.date), 'MMM d')
+  }));
+
+  const maxGDD = Math.max(...chartData.map(d => d.cumulativeGDD));
+  const minGDD = Math.min(...chartData.map(d => d.cumulativeGDD));
+
+  // Create SVG path for GDD line
+  const pathData = chartData
+    .map((point, index) => {
+      const x = padding + (index / (chartData.length - 1)) * (width - 2 * padding);
+      const y = height - padding - ((point.cumulativeGDD - minGDD) / (maxGDD - minGDD)) * (height - 2 * padding);
+      return `${index === 0 ? "M" : "L"} ${x} ${y}`;
+    })
+    .join(" ");
 
   // Handle chart click to add phenology event
-  const handleChartClick = useCallback((data: any) => {
-    if (data && data.activePayload && data.activePayload[0]) {
-      const clickedData = data.activePayload[0].payload;
-      const clickedDate = new Date(clickedData.date);
-      const gddValue = clickedData.gdd;
-      
+  const handleChartClick = useCallback((event: React.MouseEvent<SVGElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+
+    // Calculate which date was clicked
+    const clickPosition = (x - padding) / (width - 2 * padding);
+    const dataIndex = Math.round(clickPosition * (chartData.length - 1));
+
+    if (dataIndex >= 0 && dataIndex < chartData.length) {
+      const clickedDate = new Date(chartData[dataIndex].date);
       setNewEvent({
         date: clickedDate,
         phase: '',
@@ -100,7 +100,7 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
       });
       setIsDialogOpen(true);
     }
-  }, []);
+  }, [chartData]);
 
   // Add phenology event
   const handleAddEvent = () => {
@@ -140,41 +140,30 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
     });
   };
 
-  // Custom tooltip
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      const event = phenologyEvents.find(e => e.date === data.date);
-      
-      return (
-        <div className="bg-white p-4 shadow-lg rounded-lg border">
-          <p className="font-medium">{format(new Date(label), 'MMM d, yyyy')}</p>
-          <p className="text-primary">
-            GDD: {payload[0]?.value}
-          </p>
-          {event && (
-            <div className="mt-2 p-2 bg-muted rounded">
-              <p className="font-medium text-sm text-primary">{event.phase}</p>
-              {event.notes && <p className="text-xs text-muted-foreground">{event.notes}</p>}
-            </div>
-          )}
-        </div>
-      );
-    }
-    return null;
-  };
-
   // Get phase color
   const getPhaseColor = (phase: string) => {
     const colors = {
-      'budbreak': '#8fbc8f',
-      'flowering': '#ffd700',
+      'budbreak': '#22c55e',
+      'flowering': '#f59e0b',
       'fruit-set': '#87ceeb',
-      'veraison': '#dda0dd',
-      'harvest': '#cd853f',
+      'veraison': '#8b5cf6',
+      'harvest': '#ef4444',
       'dormancy': '#708090'
     };
     return colors[phase as keyof typeof colors] || '#94a3b8';
+  };
+
+  // Get phase emoji
+  const getPhaseEmoji = (phase: string) => {
+    const emojis = {
+      'budbreak': '🌱',
+      'flowering': '🌸',
+      'fruit-set': '🌿',
+      'veraison': '🍇',
+      'harvest': '🍷',
+      'dormancy': '🌙'
+    };
+    return emojis[phase as keyof typeof emojis] || '📍';
   };
 
   return (
@@ -276,86 +265,174 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
         </Dialog>
       </CardHeader>
       
-      <CardContent className="h-[400px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart
-            data={chartData}
-            margin={{ top: 20, right: 30, left: 20, bottom: 30 }}
+      <CardContent>
+        <div className="bg-white rounded-lg border overflow-auto">
+          <svg
+            width={width}
+            height={height}
+            style={{ maxWidth: "100%", cursor: "crosshair" }}
             onClick={handleChartClick}
           >
-            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-            <XAxis
-              dataKey="formattedDate"
-              tick={{ fontSize: 12 }}
-              interval={10}
+            {/* Grid */}
+            <defs>
+              <pattern
+                id="grid"
+                width="40"
+                height="30"
+                patternUnits="userSpaceOnUse"
+              >
+                <path
+                  d="M 40 0 L 0 0 0 30"
+                  fill="none"
+                  stroke="#f0f0f0"
+                  strokeWidth="1"
+                />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+
+            {/* Axes */}
+            <line
+              x1={padding}
+              y1={height - padding}
+              x2={width - padding}
+              y2={height - padding}
+              stroke="#333"
+              strokeWidth="2"
             />
-            <YAxis
-              domain={[0, 'dataMax + 100']}
-              label={{
-                value: 'Growing Degree Days',
-                angle: -90,
-                position: 'insideLeft',
-                style: { textAnchor: 'middle' }
-              }}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
-            
-            {/* Main GDD line */}
-            <Line
-              type="monotone"
-              dataKey="gdd"
-              stroke="hsl(var(--primary))"
-              strokeWidth={2}
-              dot={false}
-              name="Cumulative GDD"
+            <line
+              x1={padding}
+              y1={padding}
+              x2={padding}
+              y2={height - padding}
+              stroke="#333"
+              strokeWidth="2"
             />
 
-            {/* Phenology event markers */}
-            {phenologyEvents.map((event) => {
-              const chartPoint = chartData.find(point => point.date === event.date);
-              if (!chartPoint) return null;
-              
+            {/* Y-axis labels */}
+            <text
+              x={padding - 10}
+              y={padding + 5}
+              textAnchor="end"
+              fontSize="12"
+              fill="#666"
+            >
+              {Math.round(maxGDD)}°F
+            </text>
+            <text
+              x={padding - 10}
+              y={height - padding + 5}
+              textAnchor="end"
+              fontSize="12"
+              fill="#666"
+            >
+              {Math.round(minGDD)}°F
+            </text>
+
+            {/* X-axis date labels */}
+            {chartData
+              .filter((_, index) => index % 30 === 0)
+              .map((point, index) => {
+                const dataIndex = chartData.indexOf(point);
+                const x = padding + (dataIndex / (chartData.length - 1)) * (width - 2 * padding);
+                return (
+                  <text
+                    key={index}
+                    x={x}
+                    y={height - padding + 15}
+                    textAnchor="middle"
+                    fontSize="10"
+                    fill="#666"
+                  >
+                    {point.formattedDate}
+                  </text>
+                );
+              })}
+
+            {/* Phenology Events */}
+            {phenologyEvents.map((event, index) => {
+              const dataIndex = chartData.findIndex(d => d.date === event.date);
+              if (dataIndex === -1) return null;
+
+              const x = padding + (dataIndex / (chartData.length - 1)) * (width - 2 * padding);
+              const color = getPhaseColor(event.phase);
+              const emoji = getPhaseEmoji(event.phase);
+
               return (
-                <ReferenceDot
-                  key={event.id}
-                  x={chartPoint.formattedDate}
-                  y={event.gdd}
-                  r={6}
-                  fill={getPhaseColor(event.phase)}
+                <g key={index}>
+                  {/* Vertical line */}
+                  <line
+                    x1={x}
+                    y1={padding}
+                    x2={x}
+                    y2={height - padding}
+                    stroke={color}
+                    strokeWidth="3"
+                    strokeDasharray="5,5"
+                  />
+                  {/* Event marker */}
+                  <circle
+                    cx={x}
+                    cy={padding - 15}
+                    r="8"
+                    fill={color}
+                    stroke="white"
+                    strokeWidth="2"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => onPhaseClick({
+                      id: event.id,
+                      date: event.date,
+                      phase: event.phase as any,
+                      notes: event.notes
+                    })}
+                  />
+                  {/* Event emoji */}
+                  <text
+                    x={x}
+                    y={padding - 10}
+                    textAnchor="middle"
+                    fontSize="12"
+                  >
+                    {emoji}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* GDD Line */}
+            <path d={pathData} fill="none" stroke="hsl(var(--primary))" strokeWidth="3" />
+
+            {/* Recent data points */}
+            {chartData.slice(-6).map((point, index) => {
+              const dataIndex = chartData.indexOf(point);
+              const x = padding + (dataIndex / (chartData.length - 1)) * (width - 2 * padding);
+              const y = height - padding - ((point.cumulativeGDD - minGDD) / (maxGDD - minGDD)) * (height - 2 * padding);
+              return (
+                <circle
+                  key={index}
+                  cx={x}
+                  cy={y}
+                  r="4"
+                  fill="#10b981"
                   stroke="white"
-                  strokeWidth={2}
-                  onClick={() => onPhaseClick({
-                    id: event.id,
-                    date: event.date,
-                    phase: event.phase as any,
-                    notes: event.notes
-                  })}
+                  strokeWidth="2"
                 />
               );
             })}
 
-            {/* Phase labels */}
-            {phenologyEvents.map((event) => {
-              const chartPoint = chartData.find(point => point.date === event.date);
-              if (!chartPoint) return null;
-              
-              return (
-                <ReferenceLine
-                  key={`label-${event.id}`}
-                  x={chartPoint.formattedDate}
-                  stroke="none"
-                  label={{
-                    value: event.phase,
-                    position: 'top',
-                    fill: getPhaseColor(event.phase),
-                    fontSize: 10
-                  }}
-                />
-              );
-            })}
-          </ComposedChart>
-        </ResponsiveContainer>
+            {/* Chart Title */}
+            <text
+              x={width / 2}
+              y={25}
+              textAnchor="middle"
+              fontSize="16"
+              fontWeight="bold"
+              fill="#333"
+            >
+              Cumulative Growing Degree Days
+            </text>
+          </svg>
+        </div>
         
         {/* Event summary */}
         {phenologyEvents.length > 0 && (
