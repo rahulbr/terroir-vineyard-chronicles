@@ -4,6 +4,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { WeatherDashboard } from '@/components/weather/WeatherDashboard';
 import { PredictionsCard } from '@/components/dashboard/PredictionsCard';
 import { ActivityFeed } from '@/components/activityFeed/ActivityFeed';
+import { QuickActions } from '@/components/dashboard/QuickActions';
 import { 
   currentSeason, 
   pastSeason, 
@@ -160,6 +161,14 @@ const Index = () => {
               Track growing degree days and weather conditions for your vineyard
             </p>
           </div>
+          <QuickActions 
+            blocks={vineyardBlocks} 
+            onAddTask={handleAddTask}
+            onAddNote={handleAddNote}
+            onRecordPhase={handleRecordPhase}
+            currentPhase={currentPhaseEvent?.phase}
+            nextPhase={nextPhase}
+          />
         </div>
 
         {/* Weather Dashboard - Main Feature */}
@@ -178,7 +187,12 @@ const Index = () => {
 
         {/* Activity Feed takes full width */}
         <div>
-          <ActivityFeed activities={activities} />
+          <ActivityFeed 
+            activities={activities}
+            onAddTask={handleAddTask}
+            onAddNote={handleAddNote}
+            blocks={vineyardBlocks}
+          />
         </div>
       </div>
 
