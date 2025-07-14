@@ -106,6 +106,8 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
   };
 
   const handleAddTask = async () => {
+    console.log('ActivityFeed handleAddTask called with vineyardId:', vineyardId);
+    
     if (!taskTitle || !taskDescription || !taskDate) {
       toast({
         title: "Missing Fields",
@@ -116,6 +118,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
     }
 
     if (!vineyardId) {
+      console.error('No vineyardId provided to ActivityFeed');
       toast({
         title: "Error",
         description: "No vineyard selected. Please select a vineyard first.",

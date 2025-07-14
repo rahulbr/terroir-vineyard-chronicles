@@ -194,8 +194,15 @@ export const createTask = async (task: {
   due_date?: string;
   priority?: string;
 }) => {
+  console.log('Creating task with vineyard_id:', task.vineyard_id);
+  
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
+  if (!user) {
+    console.error('User not authenticated');
+    throw new Error('User not authenticated');
+  }
+
+  console.log('Authenticated user:', user.id);
 
   const { data, error } = await supabase
     .from('tasks')
@@ -208,6 +215,7 @@ export const createTask = async (task: {
     throw error;
   }
   
+  console.log('Task created successfully:', data);
   return data;
 };
 

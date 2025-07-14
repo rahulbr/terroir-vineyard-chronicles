@@ -14,14 +14,19 @@ export default function Activities() {
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log('Activities page loading, fetching data...');
     fetchData();
   }, []);
 
   const fetchData = async () => {
     try {
+      console.log('Fetching user vineyards...');
       const vineyards = await getUserVineyards();
+      console.log('Retrieved vineyards:', vineyards);
+      
       if (vineyards.length > 0) {
         const vineyard = vineyards[0];
+        console.log('Setting vineyard ID to:', vineyard.id);
         setVineyardId(vineyard.id);
         
         // Fetch tasks and observations
@@ -55,6 +60,13 @@ export default function Activities() {
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         setActivities(allActivities);
+      } else {
+        // If no vineyards exist, show a message
+        toast({
+          title: "No Vineyard Found",
+          description: "Please create a vineyard first before logging activities.",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Error fetching data:', error);

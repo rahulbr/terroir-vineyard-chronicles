@@ -70,6 +70,8 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   const [phaseDate, setPhaseDate] = useState<Date | undefined>(new Date());
 
   const handleAddTask = async () => {
+    console.log('QuickActions handleAddTask called with vineyardId:', vineyardId);
+    
     if (!taskTitle || !taskDescription || !taskDate) {
       toast({
         title: "Missing Fields",
@@ -80,6 +82,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     }
 
     if (!vineyardId) {
+      console.error('No vineyardId provided to QuickActions');
       toast({
         title: "Error",
         description: "No vineyard selected. Please select a vineyard first.",
