@@ -10,10 +10,8 @@ import Tasks from "./pages/Tasks";
 import Notes from "./pages/Notes";
 import Vineyard from "./pages/Vineyard";
 import Settings from "./pages/Settings";
-import GrowthCurve from "./pages/GrowthCurve";
-import NotFound from "./pages/NotFound";
-import { BertinProvider } from "./components/bertin/BertinProvider";
 
+import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -22,19 +20,16 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <BertinProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/growth-curve" element={<GrowthCurve />} />
-            <Route path="/blocks" element={<Blocks />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/notes" element={<Notes />} />
-            <Route path="/vineyard" element={<Vineyard />} />
-            <Route path="/settings" element={<Settings />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BertinProvider>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/blocks" element={<Blocks />} />
+          <Route path="/tasks" element={<Tasks />} />
+          <Route path="/notes" element={<Notes />} />
+          <Route path="/vineyard" element={<Vineyard />} />
+          <Route path="/settings" element={<Settings />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

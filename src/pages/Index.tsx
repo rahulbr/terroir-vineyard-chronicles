@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { GddChart } from '@/components/dashboard/GddChart';
+import { EnhancedGDDChart } from '@/components/dashboard/EnhancedGDDChart';
 import { PhasesCard } from '@/components/dashboard/PhasesCard';
 import { WeatherCard } from '@/components/dashboard/WeatherCard';
 import { PredictionsCard } from '@/components/dashboard/PredictionsCard';
@@ -144,9 +144,9 @@ const Index = () => {
 
         {/* Growth Curve and Growth Phases side by side */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {/* GDD Chart takes 3/4 of the width */}
+          {/* Enhanced GDD Chart takes 3/4 of the width */}
           <div className="md:col-span-3">
-            <GddChart 
+            <EnhancedGDDChart 
               currentSeason={currentSeason}
               pastSeason={pastSeason}
               onPhaseClick={handlePhaseClick}
