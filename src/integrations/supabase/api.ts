@@ -7,9 +7,13 @@ import {
 
 // Vineyard functions
 export const getUserVineyards = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
   const { data, error } = await supabase
     .from('vineyards')
     .select('*')
+    .eq('user_id', user.id)
     .order('name');
     
   if (error) {
@@ -26,9 +30,12 @@ export const createVineyard = async (vineyard: {
   latitude?: number;
   longitude?: number;
 }) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
   const { data, error } = await supabase
     .from('vineyards')
-    .insert([vineyard])
+    .insert([{ ...vineyard, user_id: user.id }])
     .select()
     .single();
     
@@ -40,6 +47,22 @@ export const createVineyard = async (vineyard: {
   return data;
 };
 
+export const deleteVineyard = async (vineyardId: string) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { error } = await supabase
+    .from('vineyards')
+    .delete()
+    .eq('id', vineyardId)
+    .eq('user_id', user.id);
+    
+  if (error) {
+    console.error('Error deleting vineyard:', error);
+    throw error;
+  }
+};
+
 // Observation functions
 export const saveObservation = async (observation: {
   vineyard_id: string;
@@ -48,10 +71,14 @@ export const saveObservation = async (observation: {
   location_notes?: string;
   photos?: string[];
 }) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
   const { data, error } = await supabase
     .from('observations')
     .insert([{
       ...observation,
+      user_id: user.id,
       timestamp: new Date().toISOString()
     }])
     .select()
@@ -67,9 +94,13 @@ export const saveObservation = async (observation: {
 
 // Task functions
 export const getTasks = async (vineyardId?: string) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
   let query = supabase
     .from('tasks')
     .select('*')
+    .eq('user_id', user.id)
     .order('due_date', { ascending: true });
     
   if (vineyardId) {
@@ -93,9 +124,12 @@ export const createTask = async (task: {
   due_date?: string;
   priority?: string;
 }) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
   const { data, error } = await supabase
     .from('tasks')
-    .insert([task])
+    .insert([{ ...task, user_id: user.id }])
     .select()
     .single();
     
@@ -109,9 +143,13 @@ export const createTask = async (task: {
 
 // Phenology Events functions
 export const getPhenologyEvents = async (vineyardId?: string) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
   let query = supabase
     .from('phenology_events')
     .select('*')
+    .eq('user_id', user.id)
     .order('event_date', { ascending: true });
     
   if (vineyardId) {
@@ -136,9 +174,12 @@ export const createPhenologyEvent = async (event: {
   notes?: string;
   harvest_block?: string;
 }) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
   const { data, error } = await supabase
     .from('phenology_events')
-    .insert([event])
+    .insert([{ ...event, user_id: user.id }])
     .select()
     .single();
     

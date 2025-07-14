@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { NewVineyardForm } from '@/components/vineyard/NewVineyardForm';
 import { Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getUserVineyards, createVineyard } from '@/integrations/supabase/api';
+import { getUserVineyards, createVineyard, deleteVineyard } from '@/integrations/supabase/api';
 
 interface VineyardSite {
   id: string;
@@ -103,13 +103,13 @@ export const VineyardSettings: React.FC = () => {
       });
 
       const vineyardSite: VineyardSite = {
-        id: savedVineyard[0].id,
-        name: savedVineyard[0].name,
-        location: savedVineyard[0].location,
-        address: savedVineyard[0].address || savedVineyard[0].location,
-        description: `Vineyard location at ${savedVineyard[0].location}`,
-        latitude: savedVineyard[0].latitude ? Number(savedVineyard[0].latitude) : undefined,
-        longitude: savedVineyard[0].longitude ? Number(savedVineyard[0].longitude) : undefined,
+        id: savedVineyard.id,
+        name: savedVineyard.name,
+        location: savedVineyard.location,
+        address: savedVineyard.address || savedVineyard.location,
+        description: `Vineyard location at ${savedVineyard.location}`,
+        latitude: savedVineyard.latitude ? Number(savedVineyard.latitude) : undefined,
+        longitude: savedVineyard.longitude ? Number(savedVineyard.longitude) : undefined,
       };
       
       setVineyardSites(prev => [...prev, vineyardSite]);
@@ -142,7 +142,10 @@ export const VineyardSettings: React.FC = () => {
     }
 
     try {
-      // Remove from local state (you could add Supabase delete here if needed)
+      // Delete from database
+      await deleteVineyard(vineyardId);
+      
+      // Remove from local state
       setVineyardSites(prev => prev.filter(site => site.id !== vineyardId));
       
       // If we deleted the currently selected vineyard, select the first one

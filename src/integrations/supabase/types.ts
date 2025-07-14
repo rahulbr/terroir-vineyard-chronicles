@@ -64,6 +64,7 @@ export type Database = {
           observation_type: string | null
           photos: string[] | null
           timestamp: string | null
+          user_id: string | null
           vineyard_id: string | null
         }
         Insert: {
@@ -74,6 +75,7 @@ export type Database = {
           observation_type?: string | null
           photos?: string[] | null
           timestamp?: string | null
+          user_id?: string | null
           vineyard_id?: string | null
         }
         Update: {
@@ -84,6 +86,7 @@ export type Database = {
           observation_type?: string | null
           photos?: string[] | null
           timestamp?: string | null
+          user_id?: string | null
           vineyard_id?: string | null
         }
         Relationships: [
@@ -105,6 +108,7 @@ export type Database = {
           harvest_block: string | null
           id: string
           notes: string | null
+          user_id: string | null
           vineyard_id: string | null
         }
         Insert: {
@@ -115,6 +119,7 @@ export type Database = {
           harvest_block?: string | null
           id?: string
           notes?: string | null
+          user_id?: string | null
           vineyard_id?: string | null
         }
         Update: {
@@ -125,6 +130,7 @@ export type Database = {
           harvest_block?: string | null
           id?: string
           notes?: string | null
+          user_id?: string | null
           vineyard_id?: string | null
         }
         Relationships: [
@@ -146,6 +152,7 @@ export type Database = {
           id: string
           priority: string | null
           title: string
+          user_id: string | null
           vineyard_id: string | null
         }
         Insert: {
@@ -156,6 +163,7 @@ export type Database = {
           id?: string
           priority?: string | null
           title: string
+          user_id?: string | null
           vineyard_id?: string | null
         }
         Update: {
@@ -166,6 +174,7 @@ export type Database = {
           id?: string
           priority?: string | null
           title?: string
+          user_id?: string | null
           vineyard_id?: string | null
         }
         Relationships: [
@@ -188,6 +197,7 @@ export type Database = {
           longitude: number | null
           name: string
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           address?: string | null
@@ -198,6 +208,7 @@ export type Database = {
           longitude?: number | null
           name: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           address?: string | null
@@ -208,6 +219,7 @@ export type Database = {
           longitude?: number | null
           name?: string
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
