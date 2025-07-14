@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { MapPin, Search, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { geocodeAddress } from '@/services/geocodingService';
 
 interface NewVineyardFormProps {
   onSave: (vineyard: { name: string; address: string; latitude: number; longitude: number }) => Promise<void>;
@@ -16,6 +17,7 @@ export const NewVineyardForm: React.FC<NewVineyardFormProps> = ({ onSave, onCanc
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [coordinates, setCoordinates] = useState<{ lat: number; lon: number } | null>(null);
+  const [formattedAddress, setFormattedAddress] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [lookupLoading, setLookupLoading] = useState(false);
   const { toast } = useToast();
@@ -32,30 +34,25 @@ export const NewVineyardForm: React.FC<NewVineyardFormProps> = ({ onSave, onCanc
 
     setLookupLoading(true);
     try {
-      // For now, we'll use a simple geocoding simulation
-      // In production, this would call Google Maps Geocoding API
       console.log('Looking up address:', address);
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = await geocodeAddress(address.trim());
       
-      // Mock geocoding - in production, replace with actual API call
-      const mockCoordinates = {
-        lat: 38.2975 + (Math.random() - 0.5) * 0.1, // Vary around Napa Valley
-        lon: -122.4581 + (Math.random() - 0.5) * 0.1
-      };
-      
-      setCoordinates(mockCoordinates);
+      setCoordinates({
+        lat: result.lat,
+        lon: result.lng
+      });
+      setFormattedAddress(result.formattedAddress);
       
       toast({
         title: "Location Found",
-        description: `Coordinates: ${mockCoordinates.lat.toFixed(4)}, ${mockCoordinates.lon.toFixed(4)}`
+        description: `Coordinates: ${result.lat.toFixed(4)}, ${result.lng.toFixed(4)}`
       });
     } catch (error) {
       console.error('Geocoding error:', error);
       toast({
         title: "Lookup Failed",
-        description: "Could not find coordinates for this address",
+        description: error instanceof Error ? error.message : "Could not find coordinates for this address",
         variant: "destructive"
       });
     } finally {
@@ -95,7 +92,7 @@ export const NewVineyardForm: React.FC<NewVineyardFormProps> = ({ onSave, onCanc
     try {
       await onSave({
         name: name.trim(),
-        address: address.trim(),
+        address: formattedAddress || address.trim(),
         latitude: coordinates.lat,
         longitude: coordinates.lon
       });
@@ -177,6 +174,11 @@ export const NewVineyardForm: React.FC<NewVineyardFormProps> = ({ onSave, onCanc
           {coordinates && (
             <div className="p-3 bg-muted/50 rounded-md">
               <p className="text-sm font-medium">Location Found</p>
+              {formattedAddress && (
+                <p className="text-xs text-muted-foreground mb-1">
+                  {formattedAddress}
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Latitude: {coordinates.lat.toFixed(6)}
               </p>
