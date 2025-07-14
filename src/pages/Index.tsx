@@ -199,13 +199,7 @@ const Index = () => {
 
         {/* Activity Feed takes full width */}
         <div>
-          <ActivityFeed 
-            activities={activities}
-            onAddTask={handleAddTask}
-            onAddNote={handleAddNote}
-            blocks={vineyardBlocks}
-            vineyardId={currentVineyard?.id}
-          />
+          <ActivityFeed />
         </div>
       </div>
 
