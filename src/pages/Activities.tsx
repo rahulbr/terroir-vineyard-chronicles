@@ -11,6 +11,7 @@ export default function Activities() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [blocks, setBlocks] = useState<VineyardBlock[]>([]);
   const [vineyardId, setVineyardId] = useState<string | undefined>();
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -18,7 +19,13 @@ export default function Activities() {
     fetchData();
   }, []);
 
+  // Debug vineyardId
+  useEffect(() => {
+    console.log('Activities page vineyardId changed to:', vineyardId);
+  }, [vineyardId]);
+
   const fetchData = async () => {
+    setLoading(true);
     try {
       console.log('Fetching user vineyards...');
       const vineyards = await getUserVineyards();
@@ -75,6 +82,8 @@ export default function Activities() {
         description: "Failed to load activities. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -137,6 +146,21 @@ export default function Activities() {
       });
     }
   };
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold">Activities</h1>
+            <p className="text-muted-foreground">
+              Loading your vineyard activities...
+            </p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
