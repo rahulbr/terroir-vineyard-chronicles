@@ -1,5 +1,9 @@
-
 import { supabase } from './client';
+import { 
+  updateVineyardWeatherData, 
+  getCumulativeGDD, 
+  CumulativeGDDData 
+} from '@/services/weatherService';
 
 // Vineyard functions
 export const getUserVineyards = async () => {
@@ -144,4 +148,37 @@ export const createPhenologyEvent = async (event: {
   }
   
   return data;
+};
+
+// Weather data functions
+export const fetchVineyardWeatherData = async (
+  vineyardId: string,
+  lat: number,
+  lon: number,
+  startDate: string,
+  endDate?: string
+): Promise<CumulativeGDDData[]> => {
+  return updateVineyardWeatherData(vineyardId, lat, lon, startDate, endDate);
+};
+
+export const getVineyardGDDData = async (
+  vineyardId: string,
+  startDate: string
+): Promise<CumulativeGDDData[]> => {
+  return getCumulativeGDD(vineyardId, startDate);
+};
+
+export const getWeatherDataForChart = async (vineyardId: string, startDate: string) => {
+  try {
+    const gddData = await getCumulativeGDD(vineyardId, startDate);
+    
+    // Transform data for the GDD chart component
+    return gddData.map(item => ({
+      date: item.date,
+      value: item.cumulativeGDD
+    }));
+  } catch (error) {
+    console.error('Error getting weather data for chart:', error);
+    throw error;
+  }
 };
