@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useWeatherData } from '@/hooks/useWeatherData';
-import { Loader2, CloudSun } from 'lucide-react';
+import { Loader2, CloudSun, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface WeatherDataManagerProps {
   vineyardId: string;
@@ -23,7 +24,8 @@ export const WeatherDataManager: React.FC<WeatherDataManagerProps> = ({
 }) => {
   const [startDate, setStartDate] = useState('2025-03-01');
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
-  const { isLoading, fetchWeatherData, loadGDDData } = useWeatherData();
+  const [error, setError] = useState<string | null>(null);
+  const { isLoading, gddData, fetchWeatherData, loadGDDData } = useWeatherData();
   const { toast } = useToast();
 
   const handleFetchWeatherData = async () => {
@@ -36,20 +38,29 @@ export const WeatherDataManager: React.FC<WeatherDataManagerProps> = ({
       return;
     }
 
+    setError(null);
+    
     try {
-      await fetchWeatherData(vineyardId, latitude, longitude, startDate, endDate);
+      console.log('Fetching weather data with params:', { vineyardId, latitude, longitude, startDate, endDate });
+      const data = await fetchWeatherData(vineyardId, latitude, longitude, startDate, endDate);
+      console.log('Weather data fetched successfully:', data.length, 'days');
       onDataUpdated?.();
     } catch (error) {
-      // Error handling is done in the hook
+      console.error('Failed to fetch weather data:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch weather data');
     }
   };
 
   const handleLoadExistingData = async () => {
+    setError(null);
+    
     try {
-      await loadGDDData(vineyardId, startDate);
+      const data = await loadGDDData(vineyardId, startDate);
+      console.log('Existing GDD data loaded:', data.length, 'days');
       onDataUpdated?.();
     } catch (error) {
-      // Error handling is done in the hook
+      console.error('Failed to load existing data:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load existing data');
     }
   };
 
@@ -62,6 +73,13 @@ export const WeatherDataManager: React.FC<WeatherDataManagerProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="start-date">Start Date</Label>
@@ -107,9 +125,19 @@ export const WeatherDataManager: React.FC<WeatherDataManagerProps> = ({
         </div>
 
         {latitude && longitude && (
-          <p className="text-sm text-muted-foreground">
-            Location: {latitude.toFixed(4)}, {longitude.toFixed(4)}
-          </p>
+          <div className="text-sm text-muted-foreground">
+            <p>Location: {latitude.toFixed(4)}, {longitude.toFixed(4)}</p>
+            <p className="text-xs mt-1">
+              Using Open Meteo API for reliable weather data
+            </p>
+          </div>
+        )}
+        
+        {gddData.length > 0 && (
+          <div className="text-sm text-muted-foreground">
+            <p>Current GDD data: {gddData.length} days</p>
+            <p>Latest cumulative GDD: {gddData[gddData.length - 1]?.cumulativeGDD.toFixed(1) || 0}°F</p>
+          </div>
         )}
       </CardContent>
     </Card>

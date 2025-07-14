@@ -27,7 +27,7 @@ export const calculateGDD = (tempHigh: number, tempLow: number, baseTemp: number
 };
 
 /**
- * Fetch weather data from OpenWeatherMap API
+ * Fetch weather data from our edge function
  */
 export const fetchWeatherData = async (
   lat: number, 
@@ -36,12 +36,8 @@ export const fetchWeatherData = async (
   endDate: string
 ): Promise<WeatherData[]> => {
   try {
-    // Get the API key from Supabase secrets
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      throw new Error('Authentication required');
-    }
-
+    console.log('Fetching weather data:', { lat, lon, startDate, endDate });
+    
     // Call our edge function to fetch weather data
     const { data, error } = await supabase.functions.invoke('fetch-weather', {
       body: { lat, lon, startDate, endDate }
@@ -49,9 +45,14 @@ export const fetchWeatherData = async (
 
     if (error) {
       console.error('Weather API error:', error);
-      throw new Error('Failed to fetch weather data');
+      throw new Error(`Failed to fetch weather data: ${error.message}`);
     }
 
+    if (!data || !data.weatherData) {
+      throw new Error('No weather data received from API');
+    }
+
+    console.log('Weather data received:', data.weatherData.length, 'days');
     return data.weatherData;
   } catch (error) {
     console.error('Error fetching weather data:', error);
@@ -73,6 +74,8 @@ export const saveWeatherData = async (vineyardId: string, weatherData: WeatherDa
       gdd: data.gdd
     }));
 
+    console.log('Saving weather data to database:', dataToInsert.length, 'records');
+
     const { error } = await supabase
       .from('weather_data')
       .upsert(dataToInsert, { 
@@ -85,7 +88,7 @@ export const saveWeatherData = async (vineyardId: string, weatherData: WeatherDa
       throw error;
     }
 
-    console.log(`Saved ${weatherData.length} weather records for vineyard ${vineyardId}`);
+    console.log(`Successfully saved ${weatherData.length} weather records for vineyard ${vineyardId}`);
   } catch (error) {
     console.error('Error saving weather data:', error);
     throw error;
@@ -100,6 +103,8 @@ export const getCumulativeGDD = async (
   startDate: string
 ): Promise<CumulativeGDDData[]> => {
   try {
+    console.log('Fetching GDD data for vineyard:', vineyardId, 'from:', startDate);
+    
     const { data, error } = await supabase
       .from('weather_data')
       .select('date, gdd')
@@ -113,6 +118,7 @@ export const getCumulativeGDD = async (
     }
 
     if (!data || data.length === 0) {
+      console.log('No GDD data found for vineyard:', vineyardId);
       return [];
     }
 
@@ -127,6 +133,7 @@ export const getCumulativeGDD = async (
       };
     });
 
+    console.log('Calculated cumulative GDD for', cumulativeData.length, 'days');
     return cumulativeData;
   } catch (error) {
     console.error('Error getting cumulative GDD:', error);
@@ -147,10 +154,12 @@ export const updateVineyardWeatherData = async (
   try {
     const endDateToUse = endDate || new Date().toISOString().split('T')[0];
     
+    console.log('Updating vineyard weather data:', { vineyardId, lat, lon, startDate, endDateToUse });
+    
     // Fetch weather data from API
     const weatherData = await fetchWeatherData(lat, lon, startDate, endDateToUse);
     
-    // Calculate GDD for each day
+    // GDD is already calculated in the edge function, but let's ensure it's correct
     const weatherWithGDD = weatherData.map(data => ({
       ...data,
       gdd: calculateGDD(data.tempHigh, data.tempLow)
