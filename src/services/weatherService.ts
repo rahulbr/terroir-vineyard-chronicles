@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface WeatherData {
@@ -36,7 +35,7 @@ export const fetchWeatherData = async (
   endDate: string
 ): Promise<WeatherData[]> => {
   try {
-    console.log('Fetching weather data:', { lat, lon, startDate, endDate });
+    console.log('Calling edge function with params:', { lat, lon, startDate, endDate });
     
     // Call our edge function to fetch weather data
     const { data, error } = await supabase.functions.invoke('fetch-weather', {
@@ -44,18 +43,24 @@ export const fetchWeatherData = async (
     });
 
     if (error) {
-      console.error('Weather API error:', error);
+      console.error('Supabase function error:', error);
       throw new Error(`Failed to fetch weather data: ${error.message}`);
     }
 
-    if (!data || !data.weatherData) {
-      throw new Error('No weather data received from API');
+    if (!data) {
+      console.error('No data received from edge function');
+      throw new Error('No data received from weather API');
     }
 
-    console.log('Weather data received:', data.weatherData.length, 'days');
+    if (!data.weatherData || !Array.isArray(data.weatherData)) {
+      console.error('Invalid weather data format:', data);
+      throw new Error('Invalid weather data format received');
+    }
+
+    console.log('Weather data received successfully:', data.weatherData.length, 'days');
     return data.weatherData;
   } catch (error) {
-    console.error('Error fetching weather data:', error);
+    console.error('Error in fetchWeatherData:', error);
     throw error;
   }
 };

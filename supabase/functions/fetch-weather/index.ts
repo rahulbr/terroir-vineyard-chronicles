@@ -60,46 +60,65 @@ serve(async (req) => {
 })
 
 async function fetchOpenMeteoData(lat: number, lon: number, startDate: string, endDate: string): Promise<WeatherDataPoint[]> {
-  // Check if we need historical data vs forecast data
   const today = new Date().toISOString().split('T')[0]
-  const isHistorical = endDate < today
-  const isFuture = startDate > today
+  const start = new Date(startDate)
+  const end = new Date(endDate)
   
-  let url: string
+  // Split date range into historical and forecast parts
+  const todayDate = new Date(today)
+  const allData: WeatherDataPoint[] = []
   
-  if (isHistorical) {
-    // Use historical API for past dates
-    url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto`
-  } else if (isFuture) {
-    // Use forecast API for future dates
-    url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto&start_date=${startDate}&end_date=${endDate}`
-  } else {
-    // Mixed historical and forecast - combine both
-    const historicalEndDate = today
-    const forecastStartDate = new Date(Date.now() + 86400000).toISOString().split('T')[0] // tomorrow
+  // Handle historical data (past dates)
+  if (start < todayDate) {
+    const historicalEndDate = end < todayDate ? endDate : today
+    console.log(`Fetching historical data from ${startDate} to ${historicalEndDate}`)
     
-    const historicalData = startDate < today ? 
-      await fetchOpenMeteoData(lat, lon, startDate, historicalEndDate) : []
-    const forecastData = endDate >= forecastStartDate ? 
-      await fetchOpenMeteoData(lat, lon, forecastStartDate, endDate) : []
+    const historicalUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${historicalEndDate}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto`
     
-    return [...historicalData, ...forecastData]
+    const historicalResponse = await fetch(historicalUrl)
+    if (!historicalResponse.ok) {
+      throw new Error(`Historical weather API error: ${historicalResponse.status} - ${historicalResponse.statusText}`)
+    }
+    
+    const historicalData = await historicalResponse.json()
+    if (historicalData.daily) {
+      const processedHistorical = processWeatherData(historicalData)
+      allData.push(...processedHistorical)
+    }
   }
   
-  console.log('Fetching from Open Meteo:', url)
-  
-  const response = await fetch(url)
-  if (!response.ok) {
-    throw new Error(`Open Meteo API error: ${response.status} - ${response.statusText}`)
+  // Handle forecast data (future dates)
+  if (end > todayDate) {
+    const forecastStartDate = start > todayDate ? startDate : getNextDay(today)
+    console.log(`Fetching forecast data from ${forecastStartDate} to ${endDate}`)
+    
+    const forecastUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto&start_date=${forecastStartDate}&end_date=${endDate}`
+    
+    const forecastResponse = await fetch(forecastUrl)
+    if (!forecastResponse.ok) {
+      throw new Error(`Forecast weather API error: ${forecastResponse.status} - ${forecastResponse.statusText}`)
+    }
+    
+    const forecastData = await forecastResponse.json()
+    if (forecastData.daily) {
+      const processedForecast = processWeatherData(forecastData)
+      allData.push(...processedForecast)
+    }
   }
   
-  const data = await response.json()
+  // Sort by date to ensure proper order
+  allData.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
   
-  if (!data.daily) {
-    throw new Error('No daily weather data received from Open Meteo API')
-  }
-  
+  console.log(`Successfully fetched ${allData.length} weather data points`)
+  return allData
+}
+
+function processWeatherData(data: any): WeatherDataPoint[] {
   const weatherData: WeatherDataPoint[] = []
+  
+  if (!data.daily || !data.daily.time) {
+    return weatherData
+  }
   
   for (let i = 0; i < data.daily.time.length; i++) {
     const date = data.daily.time[i]
@@ -120,6 +139,11 @@ async function fetchOpenMeteoData(lat: number, lon: number, startDate: string, e
     })
   }
   
-  console.log(`Successfully fetched ${weatherData.length} weather data points`)
   return weatherData
+}
+
+function getNextDay(dateString: string): string {
+  const date = new Date(dateString)
+  date.setDate(date.getDate() + 1)
+  return date.toISOString().split('T')[0]
 }
