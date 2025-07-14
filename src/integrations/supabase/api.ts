@@ -372,36 +372,3 @@ export const getWeatherDataForChart = async (vineyardId: string, startDate: stri
     throw error;
   }
 };
-
-// SIMPLIFIED VINEYARD SETTINGS FUNCTIONS - USING LOCALSTORAGE
-export const saveVineyardSettings = async (settings: {
-  selectedVineyard: string;
-  selectedVineyardName: string;
-  seasonStartDate: string;
-  seasonEndDate: string;
-  latitude: number;
-  longitude: number;
-}) => {
-  try {
-    console.log('Saving vineyard settings:', settings);
-    localStorage.setItem('vineyardSettings', JSON.stringify(settings));
-    console.log('Vineyard settings saved successfully to localStorage');
-    return settings;
-  } catch (error) {
-    console.error('Save vineyard settings error:', error);
-    throw error;
-  }
-};
-
-export const getVineyardSettings = async () => {
-  try {
-    console.log('Loading vineyard settings...');
-    const settingsStr = localStorage.getItem('vineyardSettings');
-    const settings = settingsStr ? JSON.parse(settingsStr) : null;
-    console.log('Vineyard settings loaded from localStorage:', settings);
-    return settings;
-  } catch (error) {
-    console.error('Load vineyard settings error:', error);
-    throw error;
-  }
-};

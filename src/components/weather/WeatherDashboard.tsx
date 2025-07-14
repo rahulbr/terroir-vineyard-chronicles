@@ -2,12 +2,17 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
-import { format } from 'date-fns';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon, MapPin, RefreshCw, Plus } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { format, subDays } from 'date-fns';
 import { EnhancedGDDChart } from '@/components/dashboard/EnhancedGDDChart';
+import { NewVineyardForm } from '@/components/vineyard/NewVineyardForm';
 import { Season, PhaseEvent } from '@/types';
 import { fetchWeatherData, WeatherData } from '@/services/weatherService';
-import { getVineyardSettings } from '@/integrations/supabase/api';
 import { useToast } from '@/hooks/use-toast';
 
 interface WeatherMetrics {
@@ -17,17 +22,42 @@ interface WeatherMetrics {
   avgLowTemp: number;
 }
 
-interface VineyardSettings {
-  selectedVineyard: string;
-  selectedVineyardName: string;
-  seasonStartDate: string;
-  seasonEndDate: string;
+interface VineyardSite {
+  id: string;
+  name: string;
+  address: string;
+  location: string;
   latitude: number;
   longitude: number;
 }
 
+// Default vineyard sites with coordinates
+const defaultVineyardSites: VineyardSite[] = [
+  {
+    id: 'clos-de-la-tech',
+    name: 'Clos de la Tech',
+    address: '1000 Fern Hollow Road, La Honda, CA',
+    location: 'La Honda, CA',
+    latitude: 37.3387,
+    longitude: -122.0583
+  },
+  {
+    id: 'thomas-fogarty',
+    name: 'Thomas Fogarty Winery',
+    address: '19501 Skyline Blvd, Woodside, CA 94062',
+    location: 'Woodside, CA',
+    latitude: 37.4419,
+    longitude: -122.2419
+  }
+];
+
 export const WeatherDashboard: React.FC = () => {
+  const [vineyardSites, setVineyardSites] = useState<VineyardSite[]>(defaultVineyardSites);
+  const [selectedVineyard, setSelectedVineyard] = useState<string>(vineyardSites[0].id);
+  const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 30));
+  const [endDate, setEndDate] = useState<Date>(new Date());
   const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
+  const [showNewVineyardForm, setShowNewVineyardForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [metrics, setMetrics] = useState<WeatherMetrics>({
     totalGDD: 0,
@@ -35,40 +65,54 @@ export const WeatherDashboard: React.FC = () => {
     avgHighTemp: 0,
     avgLowTemp: 0
   });
-  const [vineyardSettings, setVineyardSettings] = useState<VineyardSettings | null>(null);
   const { toast } = useToast();
 
-  const loadVineyardSettings = async () => {
-    try {
-      const settings = await getVineyardSettings();
-      console.log('Loaded vineyard settings:', settings);
-      
-      // Type guard to ensure we have valid vineyard settings
-      if (settings && 
-          settings.selectedVineyard && 
-          settings.selectedVineyardName && 
-          settings.seasonStartDate && 
-          settings.seasonEndDate &&
-          typeof settings.latitude === 'number' &&
-          typeof settings.longitude === 'number') {
-        setVineyardSettings(settings);
-        await fetchWeatherDataForSettings(settings);
-      }
-    } catch (error) {
-      console.error('Error loading vineyard settings:', error);
+  const currentVineyardSite = vineyardSites.find(site => site.id === selectedVineyard) || vineyardSites[0];
+
+  const handleNewVineyard = async (newVineyard: { name: string; address: string; latitude: number; longitude: number }) => {
+    const vineyardSite: VineyardSite = {
+      id: `vineyard-${Date.now()}`,
+      name: newVineyard.name,
+      address: newVineyard.address,
+      location: newVineyard.address.split(',').slice(-2).join(',').trim(),
+      latitude: newVineyard.latitude,
+      longitude: newVineyard.longitude
+    };
+    
+    setVineyardSites(prev => [...prev, vineyardSite]);
+    setSelectedVineyard(vineyardSite.id);
+    setShowNewVineyardForm(false);
+    
+    // Fetch real weather data for the new vineyard
+    await fetchWeatherDataForVineyard(vineyardSite);
+  };
+
+  const handleVineyardChange = async (vineyardId: string) => {
+    if (vineyardId === 'new-vineyard') {
+      setShowNewVineyardForm(true);
+      return;
+    }
+    
+    setSelectedVineyard(vineyardId);
+    const vineyard = vineyardSites.find(site => site.id === vineyardId);
+    if (vineyard) {
+      await fetchWeatherDataForVineyard(vineyard);
     }
   };
 
-  const fetchWeatherDataForSettings = async (settings: VineyardSettings) => {
+  const fetchWeatherDataForVineyard = async (vineyard: VineyardSite) => {
     setLoading(true);
     try {
-      console.log('Fetching weather data for saved settings:', settings.selectedVineyardName, settings.latitude, settings.longitude);
+      console.log('Fetching weather data for:', vineyard.name, vineyard.latitude, vineyard.longitude);
+      
+      const startDateStr = format(startDate, 'yyyy-MM-dd');
+      const endDateStr = format(endDate, 'yyyy-MM-dd');
       
       const data = await fetchWeatherData(
-        settings.latitude,
-        settings.longitude,
-        settings.seasonStartDate,
-        settings.seasonEndDate
+        vineyard.latitude,
+        vineyard.longitude,
+        startDateStr,
+        endDateStr
       );
       
       console.log('Weather data received:', data.length, 'days');
@@ -77,7 +121,7 @@ export const WeatherDashboard: React.FC = () => {
       
       toast({
         title: "Weather Data Loaded",
-        description: `Fetched ${data.length} days of weather data for ${settings.selectedVineyardName}`
+        description: `Fetched ${data.length} days of weather data for ${vineyard.name}`
       });
     } catch (error) {
       console.error('Error fetching weather data:', error);
@@ -114,13 +158,18 @@ export const WeatherDashboard: React.FC = () => {
   };
 
   const fetchData = async () => {
-    if (vineyardSettings) {
-      await fetchWeatherDataForSettings(vineyardSettings);
+    const vineyard = vineyardSites.find(site => site.id === selectedVineyard);
+    if (vineyard) {
+      await fetchWeatherDataForVineyard(vineyard);
     }
   };
 
   useEffect(() => {
-    loadVineyardSettings();
+    // Load initial data for the first vineyard
+    const initialVineyard = vineyardSites.find(site => site.id === selectedVineyard);
+    if (initialVineyard) {
+      fetchWeatherDataForVineyard(initialVineyard);
+    }
   }, []);
 
   // Convert weather data to Season format for the chart
@@ -143,34 +192,131 @@ export const WeatherDashboard: React.FC = () => {
     console.log('Phase clicked:', phase);
   };
 
+  if (showNewVineyardForm) {
+    return (
+      <div className="space-y-6">
+        <NewVineyardForm
+          onSave={handleNewVineyard}
+          onCancel={() => setShowNewVineyardForm(false)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header with Vineyard Name and Refresh Button */}
-      {vineyardSettings && (
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-bold">{vineyardSettings.selectedVineyardName}</h2>
-            <p className="text-muted-foreground">
-              Showing data from {format(new Date(vineyardSettings.seasonStartDate), 'MMM d')} to {format(new Date(vineyardSettings.seasonEndDate), 'MMM d, yyyy')}
+      {/* Vineyard Settings Panel */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Vineyard Settings
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div className="space-y-2">
+              <Label htmlFor="vineyard-select">Select Vineyard Site</Label>
+              <Select value={selectedVineyard} onValueChange={handleVineyardChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a vineyard site" />
+                </SelectTrigger>
+                <SelectContent>
+                  {vineyardSites.map((site) => (
+                    <SelectItem key={site.id} value={site.id}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{site.name}</span>
+                        <span className="text-sm text-muted-foreground">{site.address}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="new-vineyard">
+                    <div className="flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      <span className="font-medium">Add New Vineyard</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Start Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "PPP") : <span>Pick start date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(date) => date && setStartDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>End Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "PPP") : <span>Pick end date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={(date) => date && setEndDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <Button 
+              onClick={fetchData} 
+              disabled={loading}
+              className="bg-vineyard-burgundy hover:bg-vineyard-burgundy/90"
+            >
+              {loading ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                'Refresh Data'
+              )}
+            </Button>
+          </div>
+          
+          <div className="mt-4 p-3 bg-muted/50 rounded-md">
+            <p className="text-sm font-medium">{currentVineyardSite.name}</p>
+            <p className="text-sm text-muted-foreground">{currentVineyardSite.address}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Coordinates: {currentVineyardSite.latitude.toFixed(4)}, {currentVineyardSite.longitude.toFixed(4)}
             </p>
           </div>
-          <Button 
-            onClick={fetchData} 
-            disabled={loading}
-            className="bg-vineyard-burgundy hover:bg-vineyard-burgundy/90"
-          >
-            {loading ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Loading...
-              </>
-            ) : (
-              'Refresh Data'
-            )}
-          </Button>
-        </div>
-      )}
+        </CardContent>
+      </Card>
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -240,12 +386,12 @@ export const WeatherDashboard: React.FC = () => {
       </div>
 
       {/* Enhanced GDD Chart with Real Data */}
-      {weatherData.length > 0 && vineyardSettings && (
+      {weatherData.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Growing Degree Days</CardTitle>
+            <CardTitle>Growing Degree Days - Real Weather Data</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Showing {weatherData.length} days of actual weather data
+              Showing {weatherData.length} days of actual weather data from {format(startDate, 'MMM d')} to {format(endDate, 'MMM d, yyyy')}
             </p>
           </CardHeader>
           <CardContent>
@@ -258,18 +404,10 @@ export const WeatherDashboard: React.FC = () => {
         </Card>
       )}
 
-      {weatherData.length === 0 && !loading && vineyardSettings && (
+      {weatherData.length === 0 && !loading && (
         <Card>
           <CardContent className="text-center py-8">
-            <p className="text-muted-foreground">No weather data available. Please configure your vineyard settings in the Vineyard tab and refresh to load data.</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {!vineyardSettings && !loading && (
-        <Card>
-          <CardContent className="text-center py-8">
-            <p className="text-muted-foreground">Please configure your vineyard settings in the Vineyard tab to view weather data.</p>
+            <p className="text-muted-foreground">No weather data available. Please select a vineyard and refresh to load data.</p>
           </CardContent>
         </Card>
       )}
