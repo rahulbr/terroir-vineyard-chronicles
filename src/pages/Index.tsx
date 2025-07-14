@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { EnhancedGDDChart } from '@/components/dashboard/EnhancedGDDChart';
+import { WeatherDashboard } from '@/components/weather/WeatherDashboard';
 import { PhasesCard } from '@/components/dashboard/PhasesCard';
-import { WeatherCard } from '@/components/dashboard/WeatherCard';
 import { PredictionsCard } from '@/components/dashboard/PredictionsCard';
 import { ActivityFeed } from '@/components/activityFeed/ActivityFeed';
 import { QuickActions } from '@/components/dashboard/QuickActions';
-import { WeatherDataManager } from '@/components/weather/WeatherDataManager';
 import { 
   currentSeason, 
   pastSeason, 
@@ -157,10 +155,10 @@ const Index = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold">
-              Dashboard
+              Vineyard Weather Dashboard
             </h1>
             <p className="text-muted-foreground">
-              2025 Growing Season - {currentVineyard.name}
+              Track growing degree days and weather conditions for your vineyard
             </p>
           </div>
           <QuickActions 
@@ -173,13 +171,8 @@ const Index = () => {
           />
         </div>
 
-        {/* Weather Data Manager */}
-        <WeatherDataManager
-          vineyardId={currentVineyard.id}
-          latitude={currentVineyard.latitude}
-          longitude={currentVineyard.longitude}
-          onDataUpdated={handleWeatherDataUpdate}
-        />
+        {/* Weather Dashboard - Main Feature */}
+        <WeatherDashboard />
 
         {/* Insights and Recommendations section */}
         <div>
@@ -192,35 +185,19 @@ const Index = () => {
           />
         </div>
 
-        {/* Growth Curve and Growth Phases side by side */}
+        {/* Growth Phases side panel */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {/* Enhanced GDD Chart takes 3/4 of the width */}
-          <div className="md:col-span-3">
-            <EnhancedGDDChart 
-              key={weatherDataRefreshKey}
-              currentSeason={currentSeasonData}
-              pastSeason={pastSeason}
-              onPhaseClick={handlePhaseClick}
-            />
-          </div>
-          
-          {/* Growth Phases takes 1/4 of the width as a vertical section */}
           <div className="md:col-span-1">
             <PhasesCard 
               currentSeason={currentSeasonData}
               pastSeason={pastSeason}
             />
           </div>
-        </div>
-
-        {/* Weather section */}
-        <div>
-          <WeatherCard weatherData={weatherData} />
-        </div>
-
-        {/* Activity Feed */}
-        <div>
-          <ActivityFeed activities={activities} />
+          
+          {/* Activity Feed takes remaining space */}
+          <div className="md:col-span-3">
+            <ActivityFeed activities={activities} />
+          </div>
         </div>
       </div>
 
