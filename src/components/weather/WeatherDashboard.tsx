@@ -55,13 +55,22 @@ export const WeatherDashboard: React.FC = () => {
         format(endDate, 'yyyy-MM-dd')
       );
       
-      setWeatherData(data);
+      // Transform WeatherDataPoint to WeatherData format
+      const transformedData: WeatherData[] = data.map(point => ({
+        date: point.date,
+        temp_high: point.tempHigh,
+        temp_low: point.tempLow,
+        rainfall: point.rainfall,
+        gdd: point.gdd
+      }));
       
-      // Calculate metrics
-      const totalGDD = data.reduce((sum, day) => sum + day.gdd, 0);
-      const totalRainfall = data.reduce((sum, day) => sum + day.rainfall, 0);
-      const avgHighTemp = data.length > 0 ? data.reduce((sum, day) => sum + day.temp_high, 0) / data.length : 0;
-      const avgLowTemp = data.length > 0 ? data.reduce((sum, day) => sum + day.temp_low, 0) / data.length : 0;
+      setWeatherData(transformedData);
+      
+      // Calculate metrics using the transformed data
+      const totalGDD = transformedData.reduce((sum, day) => sum + day.gdd, 0);
+      const totalRainfall = transformedData.reduce((sum, day) => sum + day.rainfall, 0);
+      const avgHighTemp = transformedData.length > 0 ? transformedData.reduce((sum, day) => sum + day.temp_high, 0) / transformedData.length : 0;
+      const avgLowTemp = transformedData.length > 0 ? transformedData.reduce((sum, day) => sum + day.temp_low, 0) / transformedData.length : 0;
       
       setMetrics({
         totalGDD: Math.round(totalGDD),
@@ -83,7 +92,7 @@ export const WeatherDashboard: React.FC = () => {
 
   // Convert weather data to Season format for the chart
   const currentSeasonData: Season = {
-    year: new Date().getFullYear(),
+    year: new Date().getFullYear().toString(),
     gddData: weatherData.map((day, index) => ({
       date: day.date,
       value: weatherData.slice(0, index + 1).reduce((sum, d) => sum + d.gdd, 0) // Cumulative GDD
@@ -92,7 +101,7 @@ export const WeatherDashboard: React.FC = () => {
   };
 
   const pastSeasonData: Season = {
-    year: new Date().getFullYear() - 1,
+    year: (new Date().getFullYear() - 1).toString(),
     gddData: [],
     events: []
   };
