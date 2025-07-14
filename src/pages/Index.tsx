@@ -6,6 +6,7 @@ import { WeatherCard } from '@/components/dashboard/WeatherCard';
 import { PredictionsCard } from '@/components/dashboard/PredictionsCard';
 import { ActivityFeed } from '@/components/activityFeed/ActivityFeed';
 import { QuickActions } from '@/components/dashboard/QuickActions';
+import { WeatherDataManager } from '@/components/weather/WeatherDataManager';
 import { 
   currentSeason, 
   pastSeason, 
@@ -35,7 +36,16 @@ import { useToast } from '@/hooks/use-toast';
 const Index = () => {
   const [activities, setActivities] = useState<ActivityItemType[]>(activityItems);
   const [selectedPhase, setSelectedPhase] = useState<PhaseEvent | null>(null);
+  const [weatherDataRefreshKey, setWeatherDataRefreshKey] = useState(0);
   const { toast } = useToast();
+
+  // Mock vineyard data - in production this would come from the database
+  const currentVineyard = {
+    id: 'vineyard-1',
+    name: 'Domaine Valeta',
+    latitude: 38.2975,
+    longitude: -122.4581
+  };
 
   // Find current and next phase
   const phases: Array<PhaseEvent['phase']> = ['budbreak', 'flowering', 'fruitset', 'veraison', 'harvest'];
@@ -108,6 +118,14 @@ const Index = () => {
     });
   };
 
+  const handleWeatherDataUpdate = () => {
+    setWeatherDataRefreshKey(prev => prev + 1);
+    toast({
+      title: "Weather Data Updated",
+      description: "GDD calculations have been refreshed with latest weather data."
+    });
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -118,7 +136,7 @@ const Index = () => {
               Dashboard
             </h1>
             <p className="text-muted-foreground">
-              2025 Growing Season - Domaine Valeta
+              2025 Growing Season - {currentVineyard.name}
             </p>
           </div>
           <QuickActions 
@@ -131,7 +149,15 @@ const Index = () => {
           />
         </div>
 
-        {/* Insights and Recommendations section (moved to top) */}
+        {/* Weather Data Manager */}
+        <WeatherDataManager
+          vineyardId={currentVineyard.id}
+          latitude={currentVineyard.latitude}
+          longitude={currentVineyard.longitude}
+          onDataUpdated={handleWeatherDataUpdate}
+        />
+
+        {/* Insights and Recommendations section */}
         <div>
           <PredictionsCard
             harvestDate={predictions.harvestDate}
@@ -147,6 +173,7 @@ const Index = () => {
           {/* Enhanced GDD Chart takes 3/4 of the width */}
           <div className="md:col-span-3">
             <EnhancedGDDChart 
+              key={weatherDataRefreshKey}
               currentSeason={currentSeason}
               pastSeason={pastSeason}
               onPhaseClick={handlePhaseClick}
