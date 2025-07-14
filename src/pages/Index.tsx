@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { WeatherDashboard } from '@/components/weather/WeatherDashboard';
-import { PredictionsCard } from '@/components/dashboard/PredictionsCard';
+
 import { ActivityFeed } from '@/components/activityFeed/ActivityFeed';
 import { QuickActions } from '@/components/dashboard/QuickActions';
 import { 
@@ -186,16 +186,6 @@ const Index = () => {
         {/* Weather Dashboard - Main Feature */}
         <WeatherDashboard />
 
-        {/* Insights and Recommendations section */}
-        <div>
-          <PredictionsCard
-            harvestDate={predictions.harvestDate}
-            diseaseRisk={predictions.diseaseRisk}
-            recommendations={predictions.recommendations}
-            nextPredictedPhase="Fruitset"
-            nextPredictedDays="June 8-12"
-          />
-        </div>
 
         {/* Activity Feed takes full width */}
         <div>

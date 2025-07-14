@@ -4,6 +4,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { VineyardMap } from '@/components/vineyard/VineyardMap';
 import { VineyardStats } from '@/components/vineyard/VineyardStats';
 import { VineyardBlocks } from '@/components/vineyard/VineyardBlocks';
+import { VineyardSettings } from '@/components/vineyard/VineyardSettings';
 
 const Vineyard = () => {
   return (
@@ -15,6 +16,8 @@ const Vineyard = () => {
             Domaine Valeta Estate
           </p>
         </div>
+        
+        <VineyardSettings />
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
