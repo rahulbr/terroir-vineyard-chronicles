@@ -72,21 +72,7 @@ export const ActivityItem: React.FC<ActivityItemProps> = ({ activity }) => {
     }
   };
 
-  const renderActions = () => {
-    if (activity.type === 'task') {
-      return (
-        <div className="flex gap-2 mt-2">
-          <Button size="sm" variant="outline" className="h-7 px-2">
-            <Check className="h-4 w-4 mr-1" /> Complete
-          </Button>
-          <Button size="sm" variant="ghost" className="h-7 px-2">
-            Reschedule
-          </Button>
-        </div>
-      );
-    }
-    return null;
-  };
+  // Removed task actions as activities are logged as completed
 
   const getTypeBadge = () => {
     switch (activity.type) {
@@ -129,8 +115,6 @@ export const ActivityItem: React.FC<ActivityItemProps> = ({ activity }) => {
             {activity.blockId && <span className="ml-2">• Block: North Hill</span>}
           </div>
         </div>
-        
-        {renderActions()}
       </div>
     </div>
   );

@@ -7,8 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthWrapper } from "@/components/auth/AuthWrapper";
 import Index from "./pages/Index";
 import Blocks from "./pages/Blocks";
-import Tasks from "./pages/Tasks";
-import Notes from "./pages/Notes";
+import Activities from "./pages/Activities";
 import Vineyard from "./pages/Vineyard";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
@@ -26,8 +25,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/blocks" element={<Blocks />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/notes" element={<Notes />} />
+            <Route path="/activities" element={<Activities />} />
             <Route path="/vineyard" element={<Vineyard />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/auth" element={<Auth />} />

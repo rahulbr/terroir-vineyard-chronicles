@@ -70,10 +70,10 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   const [phaseDate, setPhaseDate] = useState<Date | undefined>(new Date());
 
   const handleAddTask = async () => {
-    if (!taskTitle || !taskDate || !taskCategory || !taskBlock) {
+    if (!taskTitle || !taskDescription || !taskDate) {
       toast({
         title: "Missing Fields",
-        description: "Please fill in all required fields.",
+        description: "Please fill in title, description, and date.",
         variant: "destructive"
       });
       return;
@@ -101,10 +101,10 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
         id: `task-${Date.now()}`,
         title: taskTitle,
         description: taskDescription,
-        blockId: taskBlock,
+        blockId: 'general',
         date: format(taskDate, 'yyyy-MM-dd'),
-        completed: false,
-        category: taskCategory as any,
+        completed: true,
+        category: (taskCategory || 'other') as any,
       };
 
       if (onAddTask) {
@@ -112,7 +112,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       }
 
       toast({
-        title: "Task Created",
+        title: "Activity Logged",
         description: `${taskTitle} has been saved to the database.`
       });
 
@@ -121,7 +121,6 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       setTaskDescription('');
       setTaskDate(new Date());
       setTaskCategory('');
-      setTaskBlock('');
       setTaskNoteOpen(false);
     } catch (error) {
       console.error('Error creating task:', error);
@@ -260,183 +259,100 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       <Dialog open={taskNoteOpen} onOpenChange={setTaskNoteOpen}>
         <DialogTrigger asChild>
           <Button variant="default" className="bg-vineyard-burgundy text-white">
-            <Plus className="h-5 w-5 mr-1" /> Add Task or Note
+            <Plus className="h-5 w-5 mr-1" /> Log Activity
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[500px]">
-          <Tabs value={actionType} onValueChange={setActionType}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="task">Task</TabsTrigger>
-              <TabsTrigger value="note">Note</TabsTrigger>
-            </TabsList>
-            <TabsContent value="task">
-              <DialogHeader>
-                <DialogTitle>Add New Task</DialogTitle>
-                <DialogDescription>
-                  Create a new vineyard task to track your work.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="task-title" className="text-right">
-                    Title
-                  </Label>
-                  <Input
-                    id="task-title"
-                    value={taskTitle}
-                    onChange={(e) => setTaskTitle(e.target.value)}
-                    className="col-span-3"
-                    placeholder="Summer pruning"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="task-description" className="text-right">
-                    Description
-                  </Label>
-                  <Textarea
-                    id="task-description"
-                    value={taskDescription}
-                    onChange={(e) => setTaskDescription(e.target.value)}
-                    className="col-span-3"
-                    placeholder="Details about the task"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="task-date" className="text-right">
-                    Date
-                  </Label>
-                  <div className="col-span-3">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !taskDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {taskDate ? format(taskDate, 'PPP') : <span>Pick a date</span>}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 pointer-events-auto">
-                        <Calendar
-                          mode="single"
-                          selected={taskDate}
-                          onSelect={setTaskDate}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="task-category" className="text-right">
-                    Category
-                  </Label>
-                  <Select value={taskCategory} onValueChange={setTaskCategory}>
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pruning">Pruning</SelectItem>
-                      <SelectItem value="spraying">Spraying</SelectItem>
-                      <SelectItem value="leafing">Leaf Management</SelectItem>
-                      <SelectItem value="harvesting">Harvesting</SelectItem>
-                      <SelectItem value="planting">Planting</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="task-block" className="text-right">
-                    Block
-                  </Label>
-                  <Select value={taskBlock} onValueChange={setTaskBlock}>
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select vineyard block" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {blocks.map(block => (
-                        <SelectItem key={block.id} value={block.id}>
-                          {block.name} - {block.variety}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          <DialogHeader>
+            <DialogTitle>Log Activity</DialogTitle>
+            <DialogDescription>
+              Record a completed vineyard activity.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="activity-title" className="text-right">
+                Title *
+              </Label>
+              <Input
+                id="activity-title"
+                value={taskTitle}
+                onChange={(e) => setTaskTitle(e.target.value)}
+                className="col-span-3"
+                placeholder="Summer pruning"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="activity-description" className="text-right">
+                Description *
+              </Label>
+              <Textarea
+                id="activity-description"
+                value={taskDescription}
+                onChange={(e) => setTaskDescription(e.target.value)}
+                className="col-span-3"
+                placeholder="Details about the activity"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="activity-date" className="text-right">
+                Date *
+              </Label>
+              <div className="col-span-3">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !taskDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {taskDate ? format(taskDate, 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 pointer-events-auto">
+                    <Calendar
+                      mode="single"
+                      selected={taskDate}
+                      onSelect={setTaskDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setTaskNoteOpen(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  className="bg-vineyard-burgundy text-white" 
-                  onClick={handleAddTask}
-                >
-                  Create Task
-                </Button>
-              </DialogFooter>
-            </TabsContent>
-            <TabsContent value="note">
-              <DialogHeader>
-                <DialogTitle>Add Vineyard Note</DialogTitle>
-                <DialogDescription>
-                  Record observations, thoughts, or any information about your vineyard.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="note-content" className="text-right">
-                    Note
-                  </Label>
-                  <Textarea
-                    id="note-content"
-                    value={noteContent}
-                    onChange={(e) => setNoteContent(e.target.value)}
-                    className="col-span-3"
-                    placeholder="Write your observations here..."
-                    rows={5}
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="note-tags" className="text-right">
-                    Tags
-                  </Label>
-                  <Input
-                    id="note-tags"
-                    value={noteTags}
-                    onChange={(e) => setNoteTags(e.target.value)}
-                    className="col-span-3"
-                    placeholder="irrigation, berries, etc. (comma separated)"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="note-block" className="text-right">
-                    Block
-                  </Label>
-                  <Select value={noteBlock} onValueChange={setNoteBlock}>
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select vineyard block" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {blocks.map(block => (
-                        <SelectItem key={block.id} value={block.id}>
-                          {block.name} - {block.variety}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setTaskNoteOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleAddNote}>Create Note</Button>
-              </DialogFooter>
-            </TabsContent>
-          </Tabs>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="activity-category" className="text-right">
+                Category
+              </Label>
+              <Select value={taskCategory} onValueChange={setTaskCategory}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select category (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pruning">Pruning</SelectItem>
+                  <SelectItem value="spraying">Spraying</SelectItem>
+                  <SelectItem value="leafing">Leaf Management</SelectItem>
+                  <SelectItem value="harvesting">Harvesting</SelectItem>
+                  <SelectItem value="planting">Planting</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTaskNoteOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              className="bg-vineyard-burgundy text-white" 
+              onClick={handleAddTask}
+            >
+              Log Activity
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
