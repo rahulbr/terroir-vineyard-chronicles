@@ -78,34 +78,64 @@ export default function Activities() {
     }
   };
 
-  const handleAddTask = (task: TaskItem) => {
-    const newActivity: ActivityItem = {
-      id: task.id,
-      type: 'task',
-      date: task.date,
-      title: task.title,
-      description: task.description,
-      blockId: task.blockId,
-      iconType: task.category,
-    };
-    setActivities(prev => [newActivity, ...prev]);
-    // Refetch data to get the latest from database
-    fetchData();
+  const handleAddTask = async (task: TaskItem) => {
+    try {
+      const newActivity: ActivityItem = {
+        id: task.id,
+        type: 'task',
+        date: task.date,
+        title: task.title,
+        description: task.description,
+        blockId: task.blockId,
+        iconType: task.category,
+      };
+      setActivities(prev => [newActivity, ...prev]);
+      
+      // Refetch data to get the latest from database
+      await fetchData();
+      
+      toast({
+        title: "Task Added",
+        description: "Task has been successfully added and saved."
+      });
+    } catch (error) {
+      console.error('Error handling add task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh activity list.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleAddNote = (note: NoteItem) => {
-    const newActivity: ActivityItem = {
-      id: note.id,
-      type: 'note',
-      date: note.date,
-      title: 'Note',
-      description: note.content,
-      blockId: note.blockId,
-      iconType: 'note',
-    };
-    setActivities(prev => [newActivity, ...prev]);
-    // Refetch data to get the latest from database
-    fetchData();
+  const handleAddNote = async (note: NoteItem) => {
+    try {
+      const newActivity: ActivityItem = {
+        id: note.id,
+        type: 'note',
+        date: note.date,
+        title: 'Note',
+        description: note.content,
+        blockId: note.blockId,
+        iconType: 'note',
+      };
+      setActivities(prev => [newActivity, ...prev]);
+      
+      // Refetch data to get the latest from database
+      await fetchData();
+      
+      toast({
+        title: "Note Added",
+        description: "Observation has been successfully added and saved."
+      });
+    } catch (error) {
+      console.error('Error handling add note:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh activity list.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (

@@ -50,6 +50,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   const [taskNoteOpen, setTaskNoteOpen] = useState(false);
   const [phaseOpen, setPhaseOpen] = useState(false);
   const [actionType, setActionType] = useState('task');
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   // Task form state
@@ -91,8 +92,9 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       return;
     }
 
+    setLoading(true);
     try {
-      await createTask({
+      const createdTask = await createTask({
         vineyard_id: vineyardId,
         title: taskTitle,
         description: taskDescription,
@@ -101,7 +103,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       });
 
       const newTask: TaskItem = {
-        id: `task-${Date.now()}`,
+        id: createdTask.id,
         title: taskTitle,
         description: taskDescription,
         blockId: 'general',
@@ -116,7 +118,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 
       toast({
         title: "Activity Logged",
-        description: `${taskTitle} has been saved to the database.`
+        description: `${taskTitle} has been saved successfully.`
       });
 
       // Reset form
@@ -125,21 +127,34 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       setTaskDate(new Date());
       setTaskCategory('');
       setTaskNoteOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating task:', error);
+      
+      // Specific error handling
+      let errorMessage = "Failed to create task. Please try again.";
+      if (error?.message?.includes('not authenticated')) {
+        errorMessage = "Authentication failed. Please sign in again.";
+      } else if (error?.message?.includes('network')) {
+        errorMessage = "Network error. Please check your connection.";
+      } else if (error?.code === 'PGRST116') {
+        errorMessage = "Database error. Please check your vineyard selection.";
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to create task. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleAddNote = async () => {
-    if (!noteContent || !noteBlock) {
+    if (!noteContent) {
       toast({
-        title: "Missing Fields",
-        description: "Please fill in all required fields.",
+        title: "Missing Content",
+        description: "Please enter note content.",
         variant: "destructive"
       });
       return;
@@ -156,19 +171,20 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 
     const tags = noteTags.split(',').map(tag => tag.trim()).filter(tag => tag);
 
+    setLoading(true);
     try {
-      await saveObservation({
+      const createdObservation = await saveObservation({
         vineyard_id: vineyardId,
         content: noteContent,
         observation_type: 'note',
-        location_notes: `Block: ${noteBlock}`,
+        location_notes: noteBlock ? `Block: ${noteBlock}` : undefined,
       });
 
       const newNote: NoteItem = {
-        id: `note-${Date.now()}`,
+        id: createdObservation.id,
         content: noteContent,
         date: new Date().toISOString().split('T')[0],
-        blockId: noteBlock,
+        blockId: noteBlock || 'general',
         tags: tags.length > 0 ? tags : ['general'],
       };
 
@@ -178,7 +194,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 
       toast({
         title: "Note Created",
-        description: "Your note has been saved to the database."
+        description: "Your observation has been saved successfully."
       });
 
       // Reset form
@@ -186,13 +202,24 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       setNoteTags('');
       setNoteBlock('');
       setTaskNoteOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating note:', error);
+      
+      // Specific error handling
+      let errorMessage = "Failed to create note. Please try again.";
+      if (error?.message?.includes('not authenticated')) {
+        errorMessage = "Authentication failed. Please sign in again.";
+      } else if (error?.message?.includes('network')) {
+        errorMessage = "Network error. Please check your connection.";
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to create note. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -218,8 +245,9 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     const phase = phaseAction === 'endCurrent' ? currentPhase : nextPhase;
     const action = phaseAction === 'endCurrent' ? 'ended' : 'started';
     
+    setLoading(true);
     try {
-      await createPhenologyEvent({
+      const createdEvent = await createPhenologyEvent({
         vineyard_id: vineyardId,
         event_type: phase,
         event_date: phaseDate ? format(phaseDate, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0],
@@ -227,7 +255,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       });
 
       const newPhase: PhaseEvent = {
-        id: `phase-${Date.now()}`,
+        id: createdEvent.id,
         phase: phase as any,
         date: phaseDate ? format(phaseDate, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0],
         notes: phaseNotes
@@ -239,20 +267,31 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 
       toast({
         title: "Phase Recorded",
-        description: `${phase.charAt(0).toUpperCase() + phase.slice(1)} ${action} has been saved to the database.`
+        description: `${phase.charAt(0).toUpperCase() + phase.slice(1)} ${action} has been saved successfully.`
       });
 
       // Reset form
       setPhaseNotes('');
       setPhaseDate(new Date());
       setPhaseOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error recording phase:', error);
+      
+      // Specific error handling
+      let errorMessage = "Failed to record phase. Please try again.";
+      if (error?.message?.includes('not authenticated')) {
+        errorMessage = "Authentication failed. Please sign in again.";
+      } else if (error?.message?.includes('network')) {
+        errorMessage = "Network error. Please check your connection.";
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to record phase. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -352,8 +391,9 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
             <Button 
               className="bg-vineyard-burgundy text-white" 
               onClick={handleAddTask}
+              disabled={loading}
             >
-              Log Activity
+              {loading ? 'Saving...' : 'Log Activity'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -434,7 +474,9 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPhaseOpen(false)}>Cancel</Button>
-            <Button onClick={handleRecordPhase}>Record Phase</Button>
+            <Button onClick={handleRecordPhase} disabled={loading}>
+              {loading ? 'Recording...' : 'Record Phase'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

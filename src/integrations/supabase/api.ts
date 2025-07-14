@@ -30,21 +30,45 @@ export const createVineyard = async (vineyard: {
   latitude?: number;
   longitude?: number;
 }) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
-
-  const { data, error } = await supabase
-    .from('vineyards')
-    .insert([{ ...vineyard, user_id: user.id }])
-    .select()
-    .single();
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.error('Authentication error:', userError);
+      throw new Error('Authentication failed. Please sign in again.');
+    }
     
-  if (error) {
-    console.error('Error creating vineyard:', error);
-    throw error;
+    if (!user) {
+      console.error('User not authenticated');
+      throw new Error('User not authenticated. Please sign in to continue.');
+    }
+
+    // Validate required fields
+    if (!vineyard.name || !vineyard.location) {
+      throw new Error('Missing required fields: name and location are required.');
+    }
+
+    const { data, error } = await supabase
+      .from('vineyards')
+      .insert([{ ...vineyard, user_id: user.id }])
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Database error creating vineyard:', error);
+      if (error.code === '23505') {
+        throw new Error('A vineyard with this name already exists.');
+      }
+      throw new Error(`Database error: ${error.message}`);
+    }
+    
+    return data;
+  } catch (error: any) {
+    console.error('Error in createVineyard:', error);
+    if (error.message) {
+      throw error; // Re-throw with original message
+    }
+    throw new Error('Network error. Please check your connection and try again.');
   }
-  
-  return data;
 };
 
 export const saveVineyard = createVineyard; // Alias for consistency
@@ -73,28 +97,51 @@ export const saveObservation = async (observation: {
   location_notes?: string;
   photos?: string[];
 }) => {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user) {
-    console.error('User authentication error:', userError);
-    throw new Error('User not authenticated');
-  }
-
-  const { data, error } = await supabase
-    .from('observations')
-    .insert([{
-      ...observation,
-      user_id: userData.user.id,
-      timestamp: new Date().toISOString()
-    }])
-    .select()
-    .single();
+  try {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.error('Authentication error:', userError);
+      throw new Error('Authentication failed. Please sign in again.');
+    }
     
-  if (error) {
-    console.error('Error saving observation:', error);
-    throw error;
+    if (!userData.user) {
+      console.error('User not authenticated');
+      throw new Error('User not authenticated. Please sign in to continue.');
+    }
+
+    // Validate required fields
+    if (!observation.vineyard_id || !observation.content) {
+      throw new Error('Missing required fields: vineyard_id and content are required.');
+    }
+
+    const { data, error } = await supabase
+      .from('observations')
+      .insert([{
+        ...observation,
+        user_id: userData.user.id,
+        timestamp: new Date().toISOString()
+      }])
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Database error saving observation:', error);
+      if (error.code === 'PGRST116') {
+        throw new Error('Invalid vineyard selection. Please select a valid vineyard.');
+      } else if (error.code === '23505') {
+        throw new Error('An observation with this information already exists.');
+      }
+      throw new Error(`Database error: ${error.message}`);
+    }
+    
+    return data;
+  } catch (error: any) {
+    console.error('Error in saveObservation:', error);
+    if (error.message) {
+      throw error; // Re-throw with original message
+    }
+    throw new Error('Network error. Please check your connection and try again.');
   }
-  
-  return data;
 };
 
 export const getObservations = async (vineyardId?: string) => {
@@ -196,27 +243,50 @@ export const createTask = async (task: {
 }) => {
   console.log('Creating task with vineyard_id:', task.vineyard_id);
   
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    console.error('User not authenticated');
-    throw new Error('User not authenticated');
-  }
-
-  console.log('Authenticated user:', user.id);
-
-  const { data, error } = await supabase
-    .from('tasks')
-    .insert([{ ...task, user_id: user.id }])
-    .select()
-    .single();
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.error('Authentication error:', userError);
+      throw new Error('Authentication failed. Please sign in again.');
+    }
     
-  if (error) {
-    console.error('Error creating task:', error);
-    throw error;
+    if (!user) {
+      console.error('User not authenticated');
+      throw new Error('User not authenticated. Please sign in to continue.');
+    }
+
+    console.log('Authenticated user:', user.id);
+
+    // Validate required fields
+    if (!task.vineyard_id || !task.title) {
+      throw new Error('Missing required fields: vineyard_id and title are required.');
+    }
+
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert([{ ...task, user_id: user.id }])
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Database error creating task:', error);
+      if (error.code === 'PGRST116') {
+        throw new Error('Invalid vineyard selection. Please select a valid vineyard.');
+      } else if (error.code === '23505') {
+        throw new Error('A task with this information already exists.');
+      }
+      throw new Error(`Database error: ${error.message}`);
+    }
+    
+    console.log('Task created successfully:', data);
+    return data;
+  } catch (error: any) {
+    console.error('Error in createTask:', error);
+    if (error.message) {
+      throw error; // Re-throw with original message
+    }
+    throw new Error('Network error. Please check your connection and try again.');
   }
-  
-  console.log('Task created successfully:', data);
-  return data;
 };
 
 export const saveTask = createTask; // Alias for consistency
@@ -296,21 +366,47 @@ export const createPhenologyEvent = async (event: {
   notes?: string;
   harvest_block?: string;
 }) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
-
-  const { data, error } = await supabase
-    .from('phenology_events')
-    .insert([{ ...event, user_id: user.id }])
-    .select()
-    .single();
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.error('Authentication error:', userError);
+      throw new Error('Authentication failed. Please sign in again.');
+    }
     
-  if (error) {
-    console.error('Error creating phenology event:', error);
-    throw error;
+    if (!user) {
+      console.error('User not authenticated');
+      throw new Error('User not authenticated. Please sign in to continue.');
+    }
+
+    // Validate required fields
+    if (!event.vineyard_id || !event.event_type || !event.event_date) {
+      throw new Error('Missing required fields: vineyard_id, event_type, and event_date are required.');
+    }
+
+    const { data, error } = await supabase
+      .from('phenology_events')
+      .insert([{ ...event, user_id: user.id }])
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Database error creating phenology event:', error);
+      if (error.code === 'PGRST116') {
+        throw new Error('Invalid vineyard selection. Please select a valid vineyard.');
+      } else if (error.code === '23505') {
+        throw new Error('A phenology event with this information already exists.');
+      }
+      throw new Error(`Database error: ${error.message}`);
+    }
+    
+    return data;
+  } catch (error: any) {
+    console.error('Error in createPhenologyEvent:', error);
+    if (error.message) {
+      throw error; // Re-throw with original message
+    }
+    throw new Error('Network error. Please check your connection and try again.');
   }
-  
-  return data;
 };
 
 export const savePhenologyEvent = createPhenologyEvent; // Alias for consistency
