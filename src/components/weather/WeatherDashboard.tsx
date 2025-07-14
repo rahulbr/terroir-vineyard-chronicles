@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,10 +5,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, MapPin, RefreshCw } from 'lucide-react';
+import { CalendarIcon, MapPin, RefreshCw, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, subDays } from 'date-fns';
 import { EnhancedGDDChart } from '@/components/dashboard/EnhancedGDDChart';
+import { NewVineyardForm } from '@/components/vineyard/NewVineyardForm';
 import { Season, PhaseEvent } from '@/types';
 
 interface WeatherData {
@@ -33,30 +33,26 @@ interface VineyardSite {
   address: string;
   location: string;
   weatherData: WeatherData[];
+  latitude?: number;
+  longitude?: number;
 }
 
-// Mock weather data for different vineyard sites
-const vineyardSites: VineyardSite[] = [
-  {
-    id: 'clos-de-la-tech',
-    name: 'Clos de la Tech',
-    address: '1000 Fern Hollow Road, La Honda, CA',
-    location: 'La Honda, CA',
-    weatherData: generateMockWeatherData('cool-climate')
-  },
-  {
-    id: 'thomas-fogarty',
-    name: 'Thomas Fogarty Winery',
-    address: '19501 Skyline Blvd, Woodside, CA 94062',
-    location: 'Woodside, CA',
-    weatherData: generateMockWeatherData('warm-climate')
-  }
-];
-
-function generateMockWeatherData(climateType: 'cool-climate' | 'warm-climate'): WeatherData[] {
+// Mock weather data generators for different climate types
+function generateMockWeatherData(climateType: 'cool-climate' | 'warm-climate' | 'custom', latitude?: number): WeatherData[] {
   const data: WeatherData[] = [];
   const startDate = subDays(new Date(), 90);
-  const baseTemp = climateType === 'warm-climate' ? 65 : 58;
+  
+  // Adjust base temperature based on climate type and latitude
+  let baseTemp = 65;
+  if (climateType === 'cool-climate') {
+    baseTemp = 58;
+  } else if (climateType === 'warm-climate') {
+    baseTemp = 68;
+  } else if (climateType === 'custom' && latitude) {
+    // Approximate temperature based on latitude (very simplified)
+    baseTemp = 85 - (latitude * 0.7);
+  }
+  
   const tempVariation = climateType === 'warm-climate' ? 15 : 12;
   
   for (let i = 0; i < 90; i++) {
@@ -71,7 +67,9 @@ function generateMockWeatherData(climateType: 'cool-climate' | 'warm-climate'): 
     const avgTemp = (tempHigh + tempLow) / 2;
     const gdd = Math.max(0, avgTemp - 50);
     
-    const rainfall = Math.random() < 0.2 ? Math.random() * (climateType === 'cool-climate' ? 1.5 : 0.8) : 0;
+    const rainfallChance = climateType === 'cool-climate' ? 0.25 : 0.15;
+    const rainfallAmount = climateType === 'cool-climate' ? 1.5 : 0.8;
+    const rainfall = Math.random() < rainfallChance ? Math.random() * rainfallAmount : 0;
     
     data.push({
       date: format(date, 'yyyy-MM-dd'),
@@ -85,11 +83,35 @@ function generateMockWeatherData(climateType: 'cool-climate' | 'warm-climate'): 
   return data;
 }
 
+// Default vineyard sites
+const defaultVineyardSites: VineyardSite[] = [
+  {
+    id: 'clos-de-la-tech',
+    name: 'Clos de la Tech',
+    address: '1000 Fern Hollow Road, La Honda, CA',
+    location: 'La Honda, CA',
+    weatherData: generateMockWeatherData('cool-climate'),
+    latitude: 37.3387,
+    longitude: -122.0583
+  },
+  {
+    id: 'thomas-fogarty',
+    name: 'Thomas Fogarty Winery',
+    address: '19501 Skyline Blvd, Woodside, CA 94062',
+    location: 'Woodside, CA',
+    weatherData: generateMockWeatherData('warm-climate'),
+    latitude: 37.4419,
+    longitude: -122.2419
+  }
+];
+
 export const WeatherDashboard: React.FC = () => {
+  const [vineyardSites, setVineyardSites] = useState<VineyardSite[]>(defaultVineyardSites);
   const [selectedVineyard, setSelectedVineyard] = useState<string>(vineyardSites[0].id);
   const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 90));
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [weatherData, setWeatherData] = useState<WeatherData[]>(vineyardSites[0].weatherData);
+  const [showNewVineyardForm, setShowNewVineyardForm] = useState(false);
   const [metrics, setMetrics] = useState<WeatherMetrics>({
     totalGDD: 0,
     totalRainfall: 0,
@@ -100,7 +122,32 @@ export const WeatherDashboard: React.FC = () => {
 
   const currentVineyardSite = vineyardSites.find(site => site.id === selectedVineyard) || vineyardSites[0];
 
+  const handleNewVineyard = async (newVineyard: { name: string; address: string; latitude: number; longitude: number }) => {
+    const vineyardSite: VineyardSite = {
+      id: `vineyard-${Date.now()}`,
+      name: newVineyard.name,
+      address: newVineyard.address,
+      location: newVineyard.address.split(',').slice(-2).join(',').trim(),
+      weatherData: generateMockWeatherData('custom', newVineyard.latitude),
+      latitude: newVineyard.latitude,
+      longitude: newVineyard.longitude
+    };
+    
+    setVineyardSites(prev => [...prev, vineyardSite]);
+    setSelectedVineyard(vineyardSite.id);
+    setShowNewVineyardForm(false);
+    
+    // Update weather data and metrics for the new vineyard
+    setWeatherData(vineyardSite.weatherData);
+    calculateMetrics(vineyardSite.weatherData);
+  };
+
   const handleVineyardChange = (vineyardId: string) => {
+    if (vineyardId === 'new-vineyard') {
+      setShowNewVineyardForm(true);
+      return;
+    }
+    
     setSelectedVineyard(vineyardId);
     const vineyard = vineyardSites.find(site => site.id === vineyardId);
     if (vineyard) {
@@ -129,11 +176,30 @@ export const WeatherDashboard: React.FC = () => {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Use the selected vineyard's data
+    // For custom vineyards, we would fetch real weather data here
+    // For now, regenerate the mock data
     const vineyard = vineyardSites.find(site => site.id === selectedVineyard);
     if (vineyard) {
-      setWeatherData(vineyard.weatherData);
-      calculateMetrics(vineyard.weatherData);
+      let newWeatherData;
+      if (vineyard.id === 'clos-de-la-tech') {
+        newWeatherData = generateMockWeatherData('cool-climate');
+      } else if (vineyard.id === 'thomas-fogarty') {
+        newWeatherData = generateMockWeatherData('warm-climate');
+      } else {
+        newWeatherData = generateMockWeatherData('custom', vineyard.latitude);
+      }
+      
+      // Update the vineyard's weather data
+      setVineyardSites(prev => 
+        prev.map(site => 
+          site.id === selectedVineyard 
+            ? { ...site, weatherData: newWeatherData }
+            : site
+        )
+      );
+      
+      setWeatherData(newWeatherData);
+      calculateMetrics(newWeatherData);
     }
     
     setLoading(false);
@@ -167,6 +233,17 @@ export const WeatherDashboard: React.FC = () => {
     console.log('Phase clicked:', phase);
   };
 
+  if (showNewVineyardForm) {
+    return (
+      <div className="space-y-6">
+        <NewVineyardForm
+          onSave={handleNewVineyard}
+          onCancel={() => setShowNewVineyardForm(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Vineyard Settings Panel */}
@@ -194,6 +271,12 @@ export const WeatherDashboard: React.FC = () => {
                       </div>
                     </SelectItem>
                   ))}
+                  <SelectItem value="new-vineyard">
+                    <div className="flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      <span className="font-medium">Add New Vineyard</span>
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -269,6 +352,11 @@ export const WeatherDashboard: React.FC = () => {
           <div className="mt-4 p-3 bg-muted/50 rounded-md">
             <p className="text-sm font-medium">{currentVineyardSite.name}</p>
             <p className="text-sm text-muted-foreground">{currentVineyardSite.address}</p>
+            {currentVineyardSite.latitude && currentVineyardSite.longitude && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Coordinates: {currentVineyardSite.latitude.toFixed(4)}, {currentVineyardSite.longitude.toFixed(4)}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -299,7 +387,7 @@ export const WeatherDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {metrics.totalRainfall}"
+              {metrics.totalRainfall}" 
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Precipitation

@@ -180,6 +180,7 @@ export type Database = {
       }
       vineyards: {
         Row: {
+          address: string | null
           created_at: string | null
           id: string
           latitude: number | null
@@ -189,6 +190,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          address?: string | null
           created_at?: string | null
           id?: string
           latitude?: number | null
@@ -198,6 +200,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          address?: string | null
           created_at?: string | null
           id?: string
           latitude?: number | null
