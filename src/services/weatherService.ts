@@ -96,7 +96,7 @@ export const saveWeatherData = async (vineyardId: string, weatherData: WeatherDa
 };
 
 /**
- * Get cumulative GDD data for a vineyard
+ * Get cumulative GDD data for a vineyard - this matches the format expected by the GDD chart
  */
 export const getCumulativeGDD = async (
   vineyardId: string, 
@@ -142,7 +142,28 @@ export const getCumulativeGDD = async (
 };
 
 /**
- * Fetch and save weather data for a vineyard
+ * Get GDD data formatted for the chart component
+ */
+export const getGDDDataForChart = async (
+  vineyardId: string, 
+  startDate: string
+): Promise<{ date: string; value: number }[]> => {
+  try {
+    const cumulativeData = await getCumulativeGDD(vineyardId, startDate);
+    
+    // Transform data to match the format expected by the GDD chart
+    return cumulativeData.map(item => ({
+      date: item.date,
+      value: item.cumulativeGDD
+    }));
+  } catch (error) {
+    console.error('Error getting GDD data for chart:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch and save weather data for a vineyard, then return cumulative GDD data
  */
 export const updateVineyardWeatherData = async (
   vineyardId: string,
@@ -168,7 +189,7 @@ export const updateVineyardWeatherData = async (
     // Save to database
     await saveWeatherData(vineyardId, weatherWithGDD);
     
-    // Return cumulative GDD data
+    // Return cumulative GDD data for the chart
     return getCumulativeGDD(vineyardId, startDate);
   } catch (error) {
     console.error('Error updating vineyard weather data:', error);

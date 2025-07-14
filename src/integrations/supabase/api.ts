@@ -170,13 +170,8 @@ export const getVineyardGDDData = async (
 
 export const getWeatherDataForChart = async (vineyardId: string, startDate: string) => {
   try {
-    const gddData = await getCumulativeGDD(vineyardId, startDate);
-    
-    // Transform data for the GDD chart component
-    return gddData.map(item => ({
-      date: item.date,
-      value: item.cumulativeGDD
-    }));
+    const { getGDDDataForChart } = await import('@/services/weatherService');
+    return getGDDDataForChart(vineyardId, startDate);
   } catch (error) {
     console.error('Error getting weather data for chart:', error);
     throw error;

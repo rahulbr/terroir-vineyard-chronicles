@@ -37,6 +37,7 @@ const Index = () => {
   const [activities, setActivities] = useState<ActivityItemType[]>(activityItems);
   const [selectedPhase, setSelectedPhase] = useState<PhaseEvent | null>(null);
   const [weatherDataRefreshKey, setWeatherDataRefreshKey] = useState(0);
+  const [currentSeasonData, setCurrentSeasonData] = useState(currentSeason);
   const { toast } = useToast();
 
   // Mock vineyard data - in production this would come from the database
@@ -118,12 +119,35 @@ const Index = () => {
     });
   };
 
-  const handleWeatherDataUpdate = () => {
-    setWeatherDataRefreshKey(prev => prev + 1);
-    toast({
-      title: "Weather Data Updated",
-      description: "GDD calculations have been refreshed with latest weather data."
-    });
+  const handleWeatherDataUpdate = async () => {
+    try {
+      // Import the weather service functions
+      const { getGDDDataForChart } = await import('@/services/weatherService');
+      
+      // Fetch updated GDD data from the database
+      const gddChartData = await getGDDDataForChart(currentVineyard.id, '2025-03-01');
+      
+      // Update the current season data with real weather data
+      const updatedCurrentSeason = {
+        ...currentSeason,
+        gddData: gddChartData
+      };
+      
+      setCurrentSeasonData(updatedCurrentSeason);
+      setWeatherDataRefreshKey(prev => prev + 1);
+      
+      toast({
+        title: "Weather Data Updated",
+        description: "GDD calculations have been refreshed with latest weather data."
+      });
+    } catch (error) {
+      console.error('Error updating weather data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh weather data. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -174,7 +198,7 @@ const Index = () => {
           <div className="md:col-span-3">
             <EnhancedGDDChart 
               key={weatherDataRefreshKey}
-              currentSeason={currentSeason}
+              currentSeason={currentSeasonData}
               pastSeason={pastSeason}
               onPhaseClick={handlePhaseClick}
             />
@@ -183,7 +207,7 @@ const Index = () => {
           {/* Growth Phases takes 1/4 of the width as a vertical section */}
           <div className="md:col-span-1">
             <PhasesCard 
-              currentSeason={currentSeason}
+              currentSeason={currentSeasonData}
               pastSeason={pastSeason}
             />
           </div>
@@ -219,7 +243,7 @@ const Index = () => {
             <div className="mt-4 bg-muted p-4 rounded-md">
               <p className="text-sm font-medium">Growing Degree Days at this phase:</p>
               <p className="text-xl font-bold text-vineyard-burgundy">
-                {currentSeason.gddData.find(point => point.date === selectedPhase?.date)?.value || 0} GDD
+                {currentSeasonData.gddData.find(point => point.date === selectedPhase?.date)?.value || 0} GDD
               </p>
             </div>
           </div>
