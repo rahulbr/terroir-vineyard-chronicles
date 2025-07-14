@@ -73,14 +73,17 @@ export const saveObservation = async (observation: {
   location_notes?: string;
   photos?: string[];
 }) => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) {
+    console.error('User authentication error:', userError);
+    throw new Error('User not authenticated');
+  }
 
   const { data, error } = await supabase
     .from('observations')
     .insert([{
       ...observation,
-      user_id: user.id,
+      user_id: userData.user.id,
       timestamp: new Date().toISOString()
     }])
     .select()

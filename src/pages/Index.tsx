@@ -38,13 +38,24 @@ const Index = () => {
   const [currentSeasonData, setCurrentSeasonData] = useState(currentSeason);
   const { toast } = useToast();
 
-  // Mock vineyard data - in production this would come from the database
-  const currentVineyard = {
-    id: 'vineyard-1',
-    name: 'Domaine Valeta',
-    latitude: 38.2975,
-    longitude: -122.4581
-  };
+  // Get real vineyard data from context (will use first vineyard for now)
+  const [currentVineyard, setCurrentVineyard] = useState<any>(null);
+
+  // Fetch vineyard data on component mount
+  React.useEffect(() => {
+    const fetchVineyard = async () => {
+      try {
+        const { getUserVineyards } = await import('@/integrations/supabase/api');
+        const vineyards = await getUserVineyards();
+        if (vineyards.length > 0) {
+          setCurrentVineyard(vineyards[0]);
+        }
+      } catch (error) {
+        console.error('Error fetching vineyard:', error);
+      }
+    };
+    fetchVineyard();
+  }, []);
 
   // Find current and next phase
   const phases: Array<PhaseEvent['phase']> = ['budbreak', 'flowering', 'fruitset', 'veraison', 'harvest'];
@@ -163,7 +174,7 @@ const Index = () => {
           </div>
           <QuickActions 
             blocks={vineyardBlocks} 
-            vineyardId={currentVineyard.id}
+            vineyardId={currentVineyard?.id}
             onAddTask={handleAddTask}
             onAddNote={handleAddNote}
             onRecordPhase={handleRecordPhase}
@@ -193,7 +204,7 @@ const Index = () => {
             onAddTask={handleAddTask}
             onAddNote={handleAddNote}
             blocks={vineyardBlocks}
-            vineyardId={currentVineyard.id}
+            vineyardId={currentVineyard?.id}
           />
         </div>
       </div>

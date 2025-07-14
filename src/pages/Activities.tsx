@@ -77,6 +77,8 @@ export default function Activities() {
       iconType: task.category,
     };
     setActivities(prev => [newActivity, ...prev]);
+    // Refetch data to get the latest from database
+    fetchData();
   };
 
   const handleAddNote = (note: NoteItem) => {
@@ -90,6 +92,8 @@ export default function Activities() {
       iconType: 'note',
     };
     setActivities(prev => [newActivity, ...prev]);
+    // Refetch data to get the latest from database
+    fetchData();
   };
 
   return (
