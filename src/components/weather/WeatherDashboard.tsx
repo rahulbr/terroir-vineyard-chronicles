@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,14 +12,8 @@ import { format, subDays } from 'date-fns';
 import { EnhancedGDDChart } from '@/components/dashboard/EnhancedGDDChart';
 import { NewVineyardForm } from '@/components/vineyard/NewVineyardForm';
 import { Season, PhaseEvent } from '@/types';
-
-interface WeatherData {
-  date: string;
-  temp_high: number;
-  temp_low: number;
-  rainfall: number;
-  gdd: number;
-}
+import { fetchWeatherData, WeatherData } from '@/services/weatherService';
+import { useToast } from '@/hooks/use-toast';
 
 interface WeatherMetrics {
   totalGDD: number;
@@ -32,65 +27,17 @@ interface VineyardSite {
   name: string;
   address: string;
   location: string;
-  weatherData: WeatherData[];
-  latitude?: number;
-  longitude?: number;
+  latitude: number;
+  longitude: number;
 }
 
-// Mock weather data generators for different climate types
-function generateMockWeatherData(climateType: 'cool-climate' | 'warm-climate' | 'custom', latitude?: number): WeatherData[] {
-  const data: WeatherData[] = [];
-  const startDate = subDays(new Date(), 90);
-  
-  // Adjust base temperature based on climate type and latitude
-  let baseTemp = 65;
-  if (climateType === 'cool-climate') {
-    baseTemp = 58;
-  } else if (climateType === 'warm-climate') {
-    baseTemp = 68;
-  } else if (climateType === 'custom' && latitude) {
-    // Approximate temperature based on latitude (very simplified)
-    baseTemp = 85 - (latitude * 0.7);
-  }
-  
-  const tempVariation = climateType === 'warm-climate' ? 15 : 12;
-  
-  for (let i = 0; i < 90; i++) {
-    const date = new Date(startDate);
-    date.setDate(date.getDate() + i);
-    
-    const seasonalVariation = Math.sin((i / 90) * Math.PI) * 10;
-    const dailyVariation = Math.random() * 10 - 5;
-    
-    const tempHigh = baseTemp + tempVariation + seasonalVariation + dailyVariation;
-    const tempLow = tempHigh - (12 + Math.random() * 8);
-    const avgTemp = (tempHigh + tempLow) / 2;
-    const gdd = Math.max(0, avgTemp - 50);
-    
-    const rainfallChance = climateType === 'cool-climate' ? 0.25 : 0.15;
-    const rainfallAmount = climateType === 'cool-climate' ? 1.5 : 0.8;
-    const rainfall = Math.random() < rainfallChance ? Math.random() * rainfallAmount : 0;
-    
-    data.push({
-      date: format(date, 'yyyy-MM-dd'),
-      temp_high: Math.round(tempHigh * 10) / 10,
-      temp_low: Math.round(tempLow * 10) / 10,
-      rainfall: Math.round(rainfall * 10) / 10,
-      gdd: Math.round(gdd * 10) / 10
-    });
-  }
-  
-  return data;
-}
-
-// Default vineyard sites
+// Default vineyard sites with coordinates
 const defaultVineyardSites: VineyardSite[] = [
   {
     id: 'clos-de-la-tech',
     name: 'Clos de la Tech',
     address: '1000 Fern Hollow Road, La Honda, CA',
     location: 'La Honda, CA',
-    weatherData: generateMockWeatherData('cool-climate'),
     latitude: 37.3387,
     longitude: -122.0583
   },
@@ -99,7 +46,6 @@ const defaultVineyardSites: VineyardSite[] = [
     name: 'Thomas Fogarty Winery',
     address: '19501 Skyline Blvd, Woodside, CA 94062',
     location: 'Woodside, CA',
-    weatherData: generateMockWeatherData('warm-climate'),
     latitude: 37.4419,
     longitude: -122.2419
   }
@@ -108,17 +54,18 @@ const defaultVineyardSites: VineyardSite[] = [
 export const WeatherDashboard: React.FC = () => {
   const [vineyardSites, setVineyardSites] = useState<VineyardSite[]>(defaultVineyardSites);
   const [selectedVineyard, setSelectedVineyard] = useState<string>(vineyardSites[0].id);
-  const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 90));
+  const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 30));
   const [endDate, setEndDate] = useState<Date>(new Date());
-  const [weatherData, setWeatherData] = useState<WeatherData[]>(vineyardSites[0].weatherData);
+  const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
   const [showNewVineyardForm, setShowNewVineyardForm] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [metrics, setMetrics] = useState<WeatherMetrics>({
     totalGDD: 0,
     totalRainfall: 0,
     avgHighTemp: 0,
     avgLowTemp: 0
   });
-  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
   const currentVineyardSite = vineyardSites.find(site => site.id === selectedVineyard) || vineyardSites[0];
 
@@ -128,7 +75,6 @@ export const WeatherDashboard: React.FC = () => {
       name: newVineyard.name,
       address: newVineyard.address,
       location: newVineyard.address.split(',').slice(-2).join(',').trim(),
-      weatherData: generateMockWeatherData('custom', newVineyard.latitude),
       latitude: newVineyard.latitude,
       longitude: newVineyard.longitude
     };
@@ -137,12 +83,11 @@ export const WeatherDashboard: React.FC = () => {
     setSelectedVineyard(vineyardSite.id);
     setShowNewVineyardForm(false);
     
-    // Update weather data and metrics for the new vineyard
-    setWeatherData(vineyardSite.weatherData);
-    calculateMetrics(vineyardSite.weatherData);
+    // Fetch real weather data for the new vineyard
+    await fetchWeatherDataForVineyard(vineyardSite);
   };
 
-  const handleVineyardChange = (vineyardId: string) => {
+  const handleVineyardChange = async (vineyardId: string) => {
     if (vineyardId === 'new-vineyard') {
       setShowNewVineyardForm(true);
       return;
@@ -151,16 +96,58 @@ export const WeatherDashboard: React.FC = () => {
     setSelectedVineyard(vineyardId);
     const vineyard = vineyardSites.find(site => site.id === vineyardId);
     if (vineyard) {
-      setWeatherData(vineyard.weatherData);
-      calculateMetrics(vineyard.weatherData);
+      await fetchWeatherDataForVineyard(vineyard);
+    }
+  };
+
+  const fetchWeatherDataForVineyard = async (vineyard: VineyardSite) => {
+    setLoading(true);
+    try {
+      console.log('Fetching weather data for:', vineyard.name, vineyard.latitude, vineyard.longitude);
+      
+      const startDateStr = format(startDate, 'yyyy-MM-dd');
+      const endDateStr = format(endDate, 'yyyy-MM-dd');
+      
+      const data = await fetchWeatherData(
+        vineyard.latitude,
+        vineyard.longitude,
+        startDateStr,
+        endDateStr
+      );
+      
+      console.log('Weather data received:', data.length, 'days');
+      setWeatherData(data);
+      calculateMetrics(data);
+      
+      toast({
+        title: "Weather Data Loaded",
+        description: `Fetched ${data.length} days of weather data for ${vineyard.name}`
+      });
+    } catch (error) {
+      console.error('Error fetching weather data:', error);
+      toast({
+        title: "Weather Data Error",
+        description: "Failed to fetch weather data. Please try again.",
+        variant: "destructive"
+      });
+      // Clear weather data on error
+      setWeatherData([]);
+      setMetrics({ totalGDD: 0, totalRainfall: 0, avgHighTemp: 0, avgLowTemp: 0 });
+    } finally {
+      setLoading(false);
     }
   };
 
   const calculateMetrics = (data: WeatherData[]) => {
+    if (data.length === 0) {
+      setMetrics({ totalGDD: 0, totalRainfall: 0, avgHighTemp: 0, avgLowTemp: 0 });
+      return;
+    }
+
     const totalGDD = data.reduce((sum, day) => sum + day.gdd, 0);
     const totalRainfall = data.reduce((sum, day) => sum + day.rainfall, 0);
-    const avgHighTemp = data.length > 0 ? data.reduce((sum, day) => sum + day.temp_high, 0) / data.length : 0;
-    const avgLowTemp = data.length > 0 ? data.reduce((sum, day) => sum + day.temp_low, 0) / data.length : 0;
+    const avgHighTemp = data.reduce((sum, day) => sum + day.tempHigh, 0) / data.length;
+    const avgLowTemp = data.reduce((sum, day) => sum + day.tempLow, 0) / data.length;
     
     setMetrics({
       totalGDD: Math.round(totalGDD),
@@ -171,46 +158,18 @@ export const WeatherDashboard: React.FC = () => {
   };
 
   const fetchData = async () => {
-    setLoading(true);
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // For custom vineyards, we would fetch real weather data here
-    // For now, regenerate the mock data
     const vineyard = vineyardSites.find(site => site.id === selectedVineyard);
     if (vineyard) {
-      let newWeatherData;
-      if (vineyard.id === 'clos-de-la-tech') {
-        newWeatherData = generateMockWeatherData('cool-climate');
-      } else if (vineyard.id === 'thomas-fogarty') {
-        newWeatherData = generateMockWeatherData('warm-climate');
-      } else {
-        newWeatherData = generateMockWeatherData('custom', vineyard.latitude);
-      }
-      
-      // Update the vineyard's weather data
-      setVineyardSites(prev => 
-        prev.map(site => 
-          site.id === selectedVineyard 
-            ? { ...site, weatherData: newWeatherData }
-            : site
-        )
-      );
-      
-      setWeatherData(newWeatherData);
-      calculateMetrics(newWeatherData);
+      await fetchWeatherDataForVineyard(vineyard);
     }
-    
-    setLoading(false);
   };
 
   useEffect(() => {
-    calculateMetrics(weatherData);
-  }, [weatherData]);
-
-  useEffect(() => {
-    handleVineyardChange(selectedVineyard);
+    // Load initial data for the first vineyard
+    const initialVineyard = vineyardSites.find(site => site.id === selectedVineyard);
+    if (initialVineyard) {
+      fetchWeatherDataForVineyard(initialVineyard);
+    }
   }, []);
 
   // Convert weather data to Season format for the chart
@@ -352,11 +311,9 @@ export const WeatherDashboard: React.FC = () => {
           <div className="mt-4 p-3 bg-muted/50 rounded-md">
             <p className="text-sm font-medium">{currentVineyardSite.name}</p>
             <p className="text-sm text-muted-foreground">{currentVineyardSite.address}</p>
-            {currentVineyardSite.latitude && currentVineyardSite.longitude && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Coordinates: {currentVineyardSite.latitude.toFixed(4)}, {currentVineyardSite.longitude.toFixed(4)}
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              Coordinates: {currentVineyardSite.latitude.toFixed(4)}, {currentVineyardSite.longitude.toFixed(4)}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -428,13 +385,31 @@ export const WeatherDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Enhanced GDD Chart with Phenology Events */}
+      {/* Enhanced GDD Chart with Real Data */}
       {weatherData.length > 0 && (
-        <EnhancedGDDChart
-          currentSeason={currentSeasonData}
-          pastSeason={pastSeasonData}
-          onPhaseClick={handlePhaseClick}
-        />
+        <Card>
+          <CardHeader>
+            <CardTitle>Growing Degree Days - Real Weather Data</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Showing {weatherData.length} days of actual weather data from {format(startDate, 'MMM d')} to {format(endDate, 'MMM d, yyyy')}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <EnhancedGDDChart
+              currentSeason={currentSeasonData}
+              pastSeason={pastSeasonData}
+              onPhaseClick={handlePhaseClick}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {weatherData.length === 0 && !loading && (
+        <Card>
+          <CardContent className="text-center py-8">
+            <p className="text-muted-foreground">No weather data available. Please select a vineyard and refresh to load data.</p>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

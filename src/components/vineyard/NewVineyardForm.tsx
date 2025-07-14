@@ -4,29 +4,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { MapPin, Search, Save } from 'lucide-react';
+import { MapPin, Search, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface NewVineyardFormProps {
-  onSave: (vineyard: { name: string; address: string; latitude: number; longitude: number }) => void;
+  onSave: (vineyard: { name: string; address: string; latitude: number; longitude: number }) => Promise<void>;
   onCancel: () => void;
-}
-
-interface GeocodeResult {
-  latitude: number;
-  longitude: number;
-  formatted_address: string;
 }
 
 export const NewVineyardForm: React.FC<NewVineyardFormProps> = ({ onSave, onCancel }) => {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
-  const [geocoding, setGeocoding] = useState(false);
-  const [geocodeResult, setGeocodeResult] = useState<GeocodeResult | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [coordinates, setCoordinates] = useState<{ lat: number; lon: number } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [lookupLoading, setLookupLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleGeocode = async () => {
+  const lookupLocation = async () => {
     if (!address.trim()) {
       toast({
         title: "Address Required",
@@ -36,33 +30,36 @@ export const NewVineyardForm: React.FC<NewVineyardFormProps> = ({ onSave, onCanc
       return;
     }
 
-    setGeocoding(true);
+    setLookupLoading(true);
     try {
-      // For now, simulate geocoding with a mock response
-      // In production, this would call the Google Maps Geocoding API
+      // For now, we'll use a simple geocoding simulation
+      // In production, this would call Google Maps Geocoding API
+      console.log('Looking up address:', address);
+      
+      // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Mock geocoding result - in production this would be from Google Maps API
-      const mockResult: GeocodeResult = {
-        latitude: 37.3387 + (Math.random() - 0.5) * 0.1,
-        longitude: -122.0583 + (Math.random() - 0.5) * 0.1,
-        formatted_address: address
+      // Mock geocoding - in production, replace with actual API call
+      const mockCoordinates = {
+        lat: 38.2975 + (Math.random() - 0.5) * 0.1, // Vary around Napa Valley
+        lon: -122.4581 + (Math.random() - 0.5) * 0.1
       };
       
-      setGeocodeResult(mockResult);
+      setCoordinates(mockCoordinates);
+      
       toast({
         title: "Location Found",
-        description: `Coordinates: ${mockResult.latitude.toFixed(4)}, ${mockResult.longitude.toFixed(4)}`
+        description: `Coordinates: ${mockCoordinates.lat.toFixed(4)}, ${mockCoordinates.lon.toFixed(4)}`
       });
     } catch (error) {
       console.error('Geocoding error:', error);
       toast({
-        title: "Geocoding Failed",
+        title: "Lookup Failed",
         description: "Could not find coordinates for this address",
         variant: "destructive"
       });
     } finally {
-      setGeocoding(false);
+      setLookupLoading(false);
     }
   };
 
@@ -76,119 +73,130 @@ export const NewVineyardForm: React.FC<NewVineyardFormProps> = ({ onSave, onCanc
       return;
     }
 
-    if (!geocodeResult) {
+    if (!address.trim()) {
       toast({
-        title: "Location Required",
-        description: "Please lookup the address first",
+        title: "Address Required",
+        description: "Please enter an address",
         variant: "destructive"
       });
       return;
     }
 
-    setSaving(true);
+    if (!coordinates) {
+      toast({
+        title: "Location Required",
+        description: "Please lookup the location first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
     try {
       await onSave({
         name: name.trim(),
-        address: geocodeResult.formatted_address,
-        latitude: geocodeResult.latitude,
-        longitude: geocodeResult.longitude
+        address: address.trim(),
+        latitude: coordinates.lat,
+        longitude: coordinates.lon
       });
       
       toast({
-        title: "Vineyard Saved",
-        description: `${name} has been added to your vineyards`
+        title: "Vineyard Added",
+        description: `${name} has been added to your vineyard sites`
       });
     } catch (error) {
-      console.error('Save error:', error);
+      console.error('Error saving vineyard:', error);
       toast({
         title: "Save Failed",
-        description: "Could not save the vineyard",
+        description: "Could not save the vineyard. Please try again.",
         variant: "destructive"
       });
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MapPin className="h-5 w-5" />
-          Add New Vineyard
-        </CardTitle>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={onCancel}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Add New Vineyard
+          </CardTitle>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="vineyard-name">Vineyard Name</Label>
-          <Input
-            id="vineyard-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Enter vineyard name"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="vineyard-address">Address</Label>
-          <div className="flex gap-2">
+      <CardContent className="space-y-6">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="vineyard-name">Vineyard Name</Label>
             <Input
-              id="vineyard-address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Enter address (e.g., 123 Main St, Napa, CA)"
-              className="flex-1"
+              id="vineyard-name"
+              placeholder="Enter vineyard name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
             />
-            <Button 
-              onClick={handleGeocode}
-              disabled={geocoding || !address.trim()}
-              variant="outline"
-            >
-              {geocoding ? (
-                <>
-                  <Search className="mr-2 h-4 w-4 animate-spin" />
-                  Looking up...
-                </>
-              ) : (
-                <>
-                  <Search className="mr-2 h-4 w-4" />
-                  Lookup
-                </>
-              )}
-            </Button>
           </div>
-        </div>
-
-        {geocodeResult && (
-          <div className="p-3 bg-muted/50 rounded-md">
-            <p className="text-sm font-medium">Location Found:</p>
-            <p className="text-sm text-muted-foreground">{geocodeResult.formatted_address}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Coordinates: {geocodeResult.latitude.toFixed(4)}, {geocodeResult.longitude.toFixed(4)}
+          
+          <div className="space-y-2">
+            <Label htmlFor="vineyard-address">Address</Label>
+            <div className="flex gap-2">
+              <Input
+                id="vineyard-address"
+                placeholder="Enter full address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="flex-1"
+              />
+              <Button 
+                onClick={lookupLocation}
+                disabled={lookupLoading || !address.trim()}
+                variant="outline"
+              >
+                {lookupLoading ? (
+                  <>
+                    <Search className="mr-2 h-4 w-4 animate-spin" />
+                    Looking up...
+                  </>
+                ) : (
+                  <>
+                    <Search className="mr-2 h-4 w-4" />
+                    Lookup
+                  </>
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Enter the full address and click "Lookup" to find coordinates
             </p>
           </div>
-        )}
-
+          
+          {coordinates && (
+            <div className="p-3 bg-muted/50 rounded-md">
+              <p className="text-sm font-medium">Location Found</p>
+              <p className="text-xs text-muted-foreground">
+                Latitude: {coordinates.lat.toFixed(6)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Longitude: {coordinates.lon.toFixed(6)}
+              </p>
+            </div>
+          )}
+        </div>
+        
         <div className="flex gap-2 justify-end">
           <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>
           <Button 
             onClick={handleSave}
-            disabled={saving || !geocodeResult || !name.trim()}
+            disabled={loading || !coordinates}
             className="bg-vineyard-burgundy hover:bg-vineyard-burgundy/90"
           >
-            {saving ? (
-              <>
-                <Save className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Vineyard
-              </>
-            )}
+            {loading ? 'Saving...' : 'Save Vineyard'}
           </Button>
         </div>
       </CardContent>
