@@ -340,6 +340,7 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
                         selected={phenologyData.startDate}
                         onSelect={handlePhenologyStartDateChange}
                         initialFocus
+                        className="pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
@@ -366,6 +367,7 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
                         selected={phenologyData.endDate}
                         onSelect={(date) => date && setPhenologyData({...phenologyData, endDate: date})}
                         initialFocus
+                        className="pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
@@ -453,6 +455,7 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
                         selected={taskData.dueDate}
                         onSelect={(date) => date && setTaskData({...taskData, dueDate: date})}
                         initialFocus
+                        className="pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>

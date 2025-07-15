@@ -213,6 +213,13 @@ export const createTask = async (task: {
 }) => {
   console.log('Creating task with data:', task);
   
+  // Get the current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be authenticated to create tasks');
+  }
+  
   const { data, error } = await supabase
     .from('tasks')
     .insert({
@@ -220,7 +227,8 @@ export const createTask = async (task: {
       title: task.title,
       description: task.description,
       due_date: task.due_date,
-      priority: task.priority || 'medium'
+      priority: task.priority || 'medium',
+      user_id: user.id
     })
     .select()
     .single();
@@ -319,6 +327,13 @@ export const createPhenologyEvent = async (event: {
 }) => {
   console.log('Creating phenology event with data:', event);
   
+  // Get the current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User must be authenticated to create phenology events');
+  }
+  
   const { data, error } = await supabase
     .from('phenology_events')
     .insert({
@@ -327,7 +342,8 @@ export const createPhenologyEvent = async (event: {
       event_date: event.event_date,
       end_date: event.end_date,
       notes: event.notes,
-      harvest_block: event.harvest_block
+      harvest_block: event.harvest_block,
+      user_id: user.id
     })
     .select()
     .single();
