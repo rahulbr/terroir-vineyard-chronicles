@@ -281,22 +281,7 @@ export const VineyardSettings: React.FC = () => {
                     <SelectContent>
                       {vineyardSites.map((site) => (
                         <SelectItem key={site.id} value={site.id}>
-                          <div className="flex items-center justify-between w-full">
-                            <span className="font-medium">{site.name}</span>
-                            {site.id !== 'clos-de-la-tech' && site.id !== 'thomas-fogarty' && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteVineyard(site.id);
-                                }}
-                                className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
+                          {site.name}
                         </SelectItem>
                       ))}
                       <SelectItem value="new-vineyard">
