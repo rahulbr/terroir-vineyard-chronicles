@@ -9,11 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { Season, PhaseEvent, GddPoint } from '@/types';
+import { createPhenologyEvent, createTask } from '@/integrations/supabase/api';
+import { useVineyard } from '@/hooks/useVineyard';
 
 interface EnhancedGDDChartProps {
   currentSeason: Season;
@@ -36,15 +39,29 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
   pastSeason, 
   onPhaseClick 
 }) => {
+  const { currentVineyard } = useVineyard();
   const [phenologyEvents, setPhenologyEvents] = useState<PhenologyEvent[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newEvent, setNewEvent] = useState({
+  const [eventType, setEventType] = useState<'phenology' | 'task'>('phenology');
+  const [loading, setLoading] = useState(false);
+  
+  // Phenology event state
+  const [phenologyData, setPhenologyData] = useState({
     startDate: new Date(),
     endDate: new Date(),
     phase: '',
     notes: '',
     block: ''
   });
+  
+  // Task state
+  const [taskData, setTaskData] = useState({
+    title: '',
+    description: '',
+    dueDate: new Date(),
+    category: ''
+  });
+  
   const { toast } = useToast();
 
   // Process GDD data to ensure monotonic increase
@@ -84,7 +101,7 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
     })
     .join(" ");
 
-  // Handle chart click to add phenology event
+  // Handle chart click to add event
   const handleChartClick = useCallback((event: React.MouseEvent<SVGElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const x = event.clientX - rect.left;
@@ -95,20 +112,35 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
 
     if (dataIndex >= 0 && dataIndex < chartData.length) {
       const clickedDate = new Date(chartData[dataIndex].date);
-      setNewEvent({
+      setPhenologyData({
         startDate: clickedDate,
         endDate: clickedDate,
         phase: '',
         notes: '',
         block: ''
       });
+      setTaskData({
+        title: '',
+        description: '',
+        dueDate: clickedDate,
+        category: ''
+      });
       setIsDialogOpen(true);
     }
   }, [chartData]);
 
   // Add phenology event
-  const handleAddEvent = () => {
-    if (!newEvent.phase) {
+  const handleAddPhenologyEvent = async () => {
+    if (!currentVineyard) {
+      toast({
+        title: "Error",
+        description: "Please select a vineyard first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!phenologyData.phase) {
       toast({
         title: "Error",
         description: "Please select a phenology phase",
@@ -117,7 +149,7 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
       return;
     }
 
-    if (!newEvent.startDate || !newEvent.endDate) {
+    if (!phenologyData.startDate || !phenologyData.endDate) {
       toast({
         title: "Error",
         description: "Please select both start and end dates",
@@ -126,38 +158,100 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
       return;
     }
 
-    const startDateStr = format(newEvent.startDate, 'yyyy-MM-dd');
-    const endDateStr = format(newEvent.endDate, 'yyyy-MM-dd');
-    const gddAtDate = processedCurrentSeasonData.find(point => point.date === startDateStr)?.value || 0;
+    setLoading(true);
+    try {
+      const startDateStr = format(phenologyData.startDate, 'yyyy-MM-dd');
+      const endDateStr = format(phenologyData.endDate, 'yyyy-MM-dd');
+      
+      await createPhenologyEvent({
+        vineyard_id: currentVineyard.id,
+        event_type: phenologyData.phase,
+        event_date: startDateStr,
+        end_date: endDateStr,
+        notes: phenologyData.notes,
+        harvest_block: phenologyData.block
+      });
 
-    const event: PhenologyEvent = {
-      id: `event-${Date.now()}`,
-      startDate: startDateStr,
-      endDate: endDateStr,
-      phase: newEvent.phase,
-      gdd: gddAtDate,
-      notes: newEvent.notes,
-      block: newEvent.block
-    };
+      const gddAtDate = processedCurrentSeasonData.find(point => point.date === startDateStr)?.value || 0;
+      const event: PhenologyEvent = {
+        id: `event-${Date.now()}`,
+        startDate: startDateStr,
+        endDate: endDateStr,
+        phase: phenologyData.phase,
+        gdd: gddAtDate,
+        notes: phenologyData.notes,
+        block: phenologyData.block
+      };
 
-    setPhenologyEvents(prev => [...prev, event]);
-    setIsDialogOpen(false);
-    setNewEvent({
-      startDate: new Date(),
-      endDate: new Date(),
-      phase: '',
-      notes: '',
-      block: ''
-    });
+      setPhenologyEvents(prev => [...prev, event]);
+      setIsDialogOpen(false);
+      
+      const dateRange = startDateStr === endDateStr 
+        ? format(phenologyData.startDate, 'MMM d')
+        : `${format(phenologyData.startDate, 'MMM d')} - ${format(phenologyData.endDate, 'MMM d')}`;
 
-    const dateRange = startDateStr === endDateStr 
-      ? format(newEvent.startDate, 'MMM d')
-      : `${format(newEvent.startDate, 'MMM d')} - ${format(newEvent.endDate, 'MMM d')}`;
+      toast({
+        title: "Phenology Event Added",
+        description: `${phenologyData.phase} event recorded for ${dateRange}`
+      });
+    } catch (error) {
+      console.error('Error creating phenology event:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save phenology event. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    toast({
-      title: "Event Added",
-      description: `${newEvent.phase} event recorded for ${dateRange}`
-    });
+  // Add task
+  const handleAddTask = async () => {
+    if (!currentVineyard) {
+      toast({
+        title: "Error",
+        description: "Please select a vineyard first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!taskData.title || !taskData.description) {
+      toast({
+        title: "Error",
+        description: "Please fill in title and description",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await createTask({
+        vineyard_id: currentVineyard.id,
+        title: taskData.title,
+        description: taskData.description,
+        due_date: format(taskData.dueDate, 'yyyy-MM-dd'),
+        priority: taskData.category || 'medium'
+      });
+
+      setIsDialogOpen(false);
+      
+      toast({
+        title: "Task Added",
+        description: `${taskData.title} scheduled for ${format(taskData.dueDate, 'MMM d')}`
+      });
+    } catch (error) {
+      console.error('Error creating task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save task. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Get phase color
@@ -187,9 +281,9 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
   };
 
   // Handle start date change and update end date
-  const handleStartDateChange = (date: Date | undefined) => {
+  const handlePhenologyStartDateChange = (date: Date | undefined) => {
     if (date) {
-      setNewEvent(prev => ({
+      setPhenologyData(prev => ({
         ...prev,
         startDate: date,
         endDate: date // Default end date to same as start date
@@ -213,111 +307,190 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
               Add Event
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Add Phenology Event</DialogTitle>
+              <DialogTitle>Add Event</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="start-date">Start Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !newEvent.startDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {newEvent.startDate ? format(newEvent.startDate, "PPP") : <span>Pick start date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={newEvent.startDate}
-                      onSelect={handleStartDateChange}
-                      initialFocus
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div>
-                <Label htmlFor="end-date">End Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !newEvent.endDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {newEvent.endDate ? format(newEvent.endDate, "PPP") : <span>Pick end date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={newEvent.endDate}
-                      onSelect={(date) => date && setNewEvent({...newEvent, endDate: date})}
-                      initialFocus
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+            
+            <Tabs value={eventType} onValueChange={(value) => setEventType(value as 'phenology' | 'task')}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="phenology">Phenology Event</TabsTrigger>
+                <TabsTrigger value="task">Vineyard Task</TabsTrigger>
+              </TabsList>
               
-              <div>
-                <Label htmlFor="phase">Phenology Phase *</Label>
-                <Select onValueChange={(value) => setNewEvent({...newEvent, phase: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select phase" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="budbreak">Budbreak</SelectItem>
-                    <SelectItem value="flowering">Flowering</SelectItem>
-                    <SelectItem value="fruit-set">Fruit Set</SelectItem>
-                    <SelectItem value="veraison">Veraison</SelectItem>
-                    <SelectItem value="harvest">Harvest</SelectItem>
-                    <SelectItem value="dormancy">Dormancy</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <TabsContent value="phenology" className="space-y-4">
+                <div>
+                  <Label htmlFor="pheno-start-date">Start Date *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !phenologyData.startDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {phenologyData.startDate ? format(phenologyData.startDate, "PPP") : <span>Pick start date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={phenologyData.startDate}
+                        onSelect={handlePhenologyStartDateChange}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
 
-              <div>
-                <Label htmlFor="block">Block (Optional)</Label>
-                <Input
-                  id="block"
-                  value={newEvent.block}
-                  onChange={(e) => setNewEvent({...newEvent, block: e.target.value})}
-                  placeholder="e.g., Block A"
-                />
-              </div>
+                <div>
+                  <Label htmlFor="pheno-end-date">End Date *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !phenologyData.endDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {phenologyData.endDate ? format(phenologyData.endDate, "PPP") : <span>Pick end date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={phenologyData.endDate}
+                        onSelect={(date) => date && setPhenologyData({...phenologyData, endDate: date})}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                
+                <div>
+                  <Label htmlFor="phase">Phenology Phase *</Label>
+                  <Select onValueChange={(value) => setPhenologyData({...phenologyData, phase: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select phase" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="budbreak">Budbreak</SelectItem>
+                      <SelectItem value="flowering">Flowering</SelectItem>
+                      <SelectItem value="fruit-set">Fruit Set</SelectItem>
+                      <SelectItem value="veraison">Veraison</SelectItem>
+                      <SelectItem value="harvest">Harvest</SelectItem>
+                      <SelectItem value="dormancy">Dormancy</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div>
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={newEvent.notes}
-                  onChange={(e) => setNewEvent({...newEvent, notes: e.target.value})}
-                  placeholder="Additional observations..."
-                  rows={3}
-                />
-              </div>
+                <div>
+                  <Label htmlFor="block">Block (Optional)</Label>
+                  <Input
+                    id="block"
+                    value={phenologyData.block}
+                    onChange={(e) => setPhenologyData({...phenologyData, block: e.target.value})}
+                    placeholder="e.g., Block A"
+                  />
+                </div>
 
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleAddEvent}>
-                  Add Event
-                </Button>
-              </div>
+                <div>
+                  <Label htmlFor="pheno-notes">Notes</Label>
+                  <Textarea
+                    id="pheno-notes"
+                    value={phenologyData.notes}
+                    onChange={(e) => setPhenologyData({...phenologyData, notes: e.target.value})}
+                    placeholder="Additional observations..."
+                    rows={3}
+                  />
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="task" className="space-y-4">
+                <div>
+                  <Label htmlFor="task-title">Task Title *</Label>
+                  <Input
+                    id="task-title"
+                    value={taskData.title}
+                    onChange={(e) => setTaskData({...taskData, title: e.target.value})}
+                    placeholder="Summer pruning"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="task-description">Description *</Label>
+                  <Textarea
+                    id="task-description"
+                    value={taskData.description}
+                    onChange={(e) => setTaskData({...taskData, description: e.target.value})}
+                    placeholder="Detailed task description..."
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="task-date">Due Date *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !taskData.dueDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {taskData.dueDate ? format(taskData.dueDate, "PPP") : <span>Pick due date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={taskData.dueDate}
+                        onSelect={(date) => date && setTaskData({...taskData, dueDate: date})}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                
+                <div>
+                  <Label htmlFor="task-category">Category</Label>
+                  <Select onValueChange={(value) => setTaskData({...taskData, category: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pruning">Pruning</SelectItem>
+                      <SelectItem value="spraying">Spraying/Treatment</SelectItem>
+                      <SelectItem value="canopy">Canopy Management</SelectItem>
+                      <SelectItem value="irrigation">Irrigation</SelectItem>
+                      <SelectItem value="harvesting">Harvesting</SelectItem>
+                      <SelectItem value="soil">Soil Management</SelectItem>
+                      <SelectItem value="equipment">Equipment Maintenance</SelectItem>
+                      <SelectItem value="pest">Pest Control</SelectItem>
+                      <SelectItem value="fertilizing">Fertilizing</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={eventType === 'phenology' ? handleAddPhenologyEvent : handleAddTask}
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : `Add ${eventType === 'phenology' ? 'Event' : 'Task'}`}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
