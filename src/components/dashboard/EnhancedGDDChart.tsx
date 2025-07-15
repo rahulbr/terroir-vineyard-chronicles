@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -15,13 +15,14 @@ import { cn } from '@/lib/utils';
 import { CalendarIcon, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { Season, PhaseEvent, GddPoint } from '@/types';
-import { createPhenologyEvent, createTask } from '@/integrations/supabase/api';
+import { createPhenologyEvent, createTask, getPhenologyEvents } from '@/integrations/supabase/api';
 import { useVineyard } from '@/hooks/useVineyard';
 
 interface EnhancedGDDChartProps {
   currentSeason: Season;
   pastSeason: Season;
   onPhaseClick: (phase: PhaseEvent) => void;
+  onActivitiesChange?: () => void;
 }
 
 interface PhenologyEvent {
@@ -37,7 +38,8 @@ interface PhenologyEvent {
 export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({ 
   currentSeason, 
   pastSeason, 
-  onPhaseClick 
+  onPhaseClick,
+  onActivitiesChange
 }) => {
   const { currentVineyard } = useVineyard();
   const [phenologyEvents, setPhenologyEvents] = useState<PhenologyEvent[]>([]);
@@ -76,6 +78,31 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
       }
     });
   }, [currentSeason]);
+
+  // Fetch phenology events from database
+  useEffect(() => {
+    const fetchPhenologyEvents = async () => {
+      if (!currentVineyard) return;
+      
+      try {
+        const events = await getPhenologyEvents(currentVineyard.id);
+        const formattedEvents: PhenologyEvent[] = events.map(event => ({
+          id: event.id,
+          startDate: event.event_date,
+          endDate: event.end_date || event.event_date,
+          phase: event.event_type,
+          gdd: processedCurrentSeasonData.find(point => point.date === event.event_date)?.value || 0,
+          notes: event.notes || '',
+          block: event.harvest_block || ''
+        }));
+        setPhenologyEvents(formattedEvents);
+      } catch (error) {
+        console.error('Error fetching phenology events:', error);
+      }
+    };
+
+    fetchPhenologyEvents();
+  }, [currentVineyard, processedCurrentSeasonData]);
 
   // Chart dimensions
   const width = 800;
@@ -185,6 +212,7 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
 
       setPhenologyEvents(prev => [...prev, event]);
       setIsDialogOpen(false);
+      onActivitiesChange?.(); // Notify parent components to refresh
       
       const dateRange = startDateStr === endDateStr 
         ? format(phenologyData.startDate, 'MMM d')
@@ -237,6 +265,7 @@ export const EnhancedGDDChart: React.FC<EnhancedGDDChartProps> = ({
       });
 
       setIsDialogOpen(false);
+      onActivitiesChange?.(); // Notify parent components to refresh
       
       toast({
         title: "Task Added",

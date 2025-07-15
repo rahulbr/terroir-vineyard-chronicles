@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { WeatherDashboard } from '@/components/weather/WeatherDashboard';
 
@@ -36,7 +36,13 @@ const Index = () => {
   const [selectedPhase, setSelectedPhase] = useState<PhaseEvent | null>(null);
   const [weatherDataRefreshKey, setWeatherDataRefreshKey] = useState(0);
   const [currentSeasonData, setCurrentSeasonData] = useState(currentSeason);
+  const [refreshActivities, setRefreshActivities] = useState(0);
   const { toast } = useToast();
+
+  // Callback to refresh activities when Growth Curve adds events
+  const handleActivitiesChange = useCallback(() => {
+    setRefreshActivities(prev => prev + 1);
+  }, []);
 
   // Get real vineyard data from context (will use first vineyard for now)
   const [currentVineyard, setCurrentVineyard] = useState<any>(null);
@@ -184,12 +190,12 @@ const Index = () => {
         </div>
 
         {/* Weather Dashboard - Main Feature */}
-        <WeatherDashboard />
+        <WeatherDashboard onActivitiesChange={handleActivitiesChange} />
 
 
         {/* Activity Feed takes full width */}
         <div>
-          <ActivityFeed />
+          <ActivityFeed key={refreshActivities} onRefreshActivities={handleActivitiesChange} />
         </div>
       </div>
 

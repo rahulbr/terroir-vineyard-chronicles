@@ -51,7 +51,11 @@ const defaultVineyardSites: VineyardSite[] = [
   }
 ];
 
-export const WeatherDashboard: React.FC = () => {
+interface WeatherDashboardProps {
+  onActivitiesChange?: () => void;
+}
+
+export const WeatherDashboard: React.FC<WeatherDashboardProps> = ({ onActivitiesChange }) => {
   const [vineyardSites, setVineyardSites] = useState<VineyardSite[]>(defaultVineyardSites);
   const [selectedVineyard, setSelectedVineyard] = useState<string>(vineyardSites[0].id);
   const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 30));
@@ -399,6 +403,7 @@ export const WeatherDashboard: React.FC = () => {
               currentSeason={currentSeasonData}
               pastSeason={pastSeasonData}
               onPhaseClick={handlePhaseClick}
+              onActivitiesChange={onActivitiesChange}
             />
           </CardContent>
         </Card>

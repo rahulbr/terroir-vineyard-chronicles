@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ActivityItem as ActivityItemType } from '@/types';
 import { ActivityItem } from './ActivityItem';
@@ -12,7 +12,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { ActivityLogger } from '@/components/activities/ActivityLogger';
+
 import { getTasks, getObservations, getPhenologyEvents, deleteTask, deletePhenologyEvent, deleteObservation } from '@/integrations/supabase/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useVineyard } from '@/hooks/useVineyard';
@@ -22,9 +22,10 @@ import { cn } from '@/lib/utils';
 
 interface ActivityFeedProps {
   className?: string;
+  onRefreshActivities?: () => void;
 }
 
-export const ActivityFeed: React.FC<ActivityFeedProps> = ({ className }) => {
+export const ActivityFeed: React.FC<ActivityFeedProps> = ({ className, onRefreshActivities }) => {
   const { user } = useAuth();
   const { currentVineyard, isAuthenticated, hasVineyard } = useVineyard();
   const { toast } = useToast();
@@ -150,6 +151,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ className }) => {
       });
       
       fetchActivities();
+      onRefreshActivities?.(); // Notify parent components to refresh
     } catch (error: any) {
       console.error('Error deleting activity:', error);
       toast({
@@ -227,8 +229,6 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ className }) => {
             )}
           </CardTitle>
           <div className="flex gap-2">
-            <ActivityLogger onActivityLogged={handleActivityLogged} />
-            
             <Button
               variant="outline"
               size="sm"
