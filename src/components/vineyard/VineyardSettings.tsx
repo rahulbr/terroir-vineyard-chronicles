@@ -297,8 +297,8 @@ export const VineyardSettings: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent>
                       {vineyardSites.map((site) => (
-                        <SelectItem key={site.id} value={site.id}>
-                          {site.name}
+                        <SelectItem key={site.id} value={site.id} title={site.name}>
+                          {site.name.length > 20 ? `${site.name.substring(0, 20)}...` : site.name}
                         </SelectItem>
                       ))}
                       <SelectItem value="new-vineyard">
