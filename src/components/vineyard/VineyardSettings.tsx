@@ -102,15 +102,32 @@ export const VineyardSettings: React.FC = () => {
         // Convert Supabase data to VineyardSite format
         const formattedVineyards: VineyardSite[] = [
           ...defaultVineyardSites,
-          ...vineyards.map(v => ({
-            id: v.id,
-            name: v.name,
-            location: v.location,
-            address: v.address || v.location,
-            description: `Vineyard location at ${v.location}`,
-            latitude: v.latitude ? Number(v.latitude) : undefined,
-            longitude: v.longitude ? Number(v.longitude) : undefined,
-          }))
+           ...vineyards.map(v => {
+             // Clean up the display name - if name contains an address, try to extract a cleaner name
+             let displayName = v.name;
+             
+             // If the name looks like an address (contains numbers and street indicators), use first part or fallback
+             if (/\d+.*(?:rd|road|st|street|ave|avenue|blvd|boulevard|dr|drive|ln|lane|way|ct|court)/i.test(v.name)) {
+               // Try to extract business name before the address, or use "Vineyard" as fallback
+               const parts = v.name.split(/[,-]/);
+               displayName = parts[0].trim() || "Custom Vineyard";
+             }
+             
+             // If name is just a location like "La Honda, California", extract the first part
+             if (v.name.includes(',') && !displayName.toLowerCase().includes('vineyard') && !displayName.toLowerCase().includes('winery')) {
+               displayName = v.name.split(',')[0].trim();
+             }
+             
+             return {
+               id: v.id,
+               name: displayName,
+               location: v.location,
+               address: v.address || v.location,
+               description: `Vineyard location at ${v.location}`,
+               latitude: v.latitude ? Number(v.latitude) : undefined,
+               longitude: v.longitude ? Number(v.longitude) : undefined,
+             };
+           })
         ];
         
         setVineyardSites(formattedVineyards);
