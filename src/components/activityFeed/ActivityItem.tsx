@@ -4,14 +4,15 @@ import { ActivityItem as ActivityItemType } from '@/types';
 import { format, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Calendar, Book, TreeDeciduous, CloudSun, Check, X } from 'lucide-react';
+import { Calendar, Book, TreeDeciduous, CloudSun, Check, X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ActivityItemProps {
   activity: ActivityItemType;
+  onDelete?: (activityId: string, activityType: string) => Promise<void>;
 }
 
-export const ActivityItem: React.FC<ActivityItemProps> = ({ activity }) => {
+export const ActivityItem: React.FC<ActivityItemProps> = ({ activity, onDelete }) => {
   const getIcon = () => {
     switch (activity.iconType) {
       case 'pruning':
@@ -106,13 +107,27 @@ export const ActivityItem: React.FC<ActivityItemProps> = ({ activity }) => {
             <h4 className="font-medium text-foreground">{activity.title}</h4>
             <p className="text-sm text-muted-foreground">{activity.description}</p>
           </div>
-          {getTypeBadge()}
+          <div className="flex items-center gap-2">
+            {getTypeBadge()}
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onDelete(activity.id, activity.type)}
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
         </div>
         
         <div className="flex justify-between items-center mt-1">
           <div className="text-xs text-muted-foreground">
             {format(parseISO(activity.date), 'MMM d, yyyy')}
-            {activity.blockId && <span className="ml-2">• Block: North Hill</span>}
+            {activity.blockId && activity.blockId !== 'general' && (
+              <span className="ml-2">• Block: {activity.blockId}</span>
+            )}
           </div>
         </div>
       </div>

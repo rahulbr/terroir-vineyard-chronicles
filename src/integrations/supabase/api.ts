@@ -359,6 +359,24 @@ export const createPhenologyEvent = async (event: {
   return data;
 };
 
+export const deletePhenologyEvent = async (id: string) => {
+  console.log('Deleting phenology event:', id);
+  
+  const { error } = await supabase
+    .from('phenology_events')
+    .delete()
+    .eq('id', id);
+    
+  console.log('Phenology event deletion result:', { error });
+  
+  if (error) {
+    console.error('Error deleting phenology event:', error);
+    throw error;
+  }
+  
+  console.log('Successfully deleted phenology event');
+};
+
 export const savePhenologyEvent = createPhenologyEvent;
 
 // Weather data functions

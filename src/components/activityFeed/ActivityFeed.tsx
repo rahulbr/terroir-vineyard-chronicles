@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { ActivityLogger } from '@/components/activities/ActivityLogger';
-import { getTasks, getObservations } from '@/integrations/supabase/api';
+import { getTasks, getObservations, getPhenologyEvents, deleteTask, deletePhenologyEvent, deleteObservation } from '@/integrations/supabase/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useVineyard } from '@/hooks/useVineyard';
 import { useToast } from '@/hooks/use-toast';
@@ -40,6 +40,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ className }) => {
     weather: boolean;
     pest: boolean;
     general: boolean;
+    phenology: boolean;
   }>({
     task: true,
     note: true,
@@ -47,6 +48,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ className }) => {
     weather: true,
     pest: true,
     general: true,
+    phenology: true,
   });
 
   // Fetch activities when component mounts or vineyard changes
@@ -63,9 +65,10 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ className }) => {
     
     setLoading(true);
     try {
-      const [tasks, observations] = await Promise.all([
+      const [tasks, observations, phenologyEvents] = await Promise.all([
         getTasks(currentVineyard.id),
-        getObservations(currentVineyard.id)
+        getObservations(currentVineyard.id),
+        getPhenologyEvents(currentVineyard.id)
       ]);
 
       // Convert tasks to activity items
@@ -90,7 +93,18 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ className }) => {
         iconType: obs.observation_type || 'general'
       }));
 
-      const allActivities = [...taskActivities, ...observationActivities]
+      // Convert phenology events to activity items
+      const phenologyActivities: ActivityItemType[] = phenologyEvents.map(event => ({
+        id: event.id,
+        type: 'phase',
+        date: event.event_date,
+        title: event.event_type,
+        description: event.notes || `${event.event_type} event${event.harvest_block ? ` - Block: ${event.harvest_block}` : ''}`,
+        blockId: event.harvest_block || 'general',
+        iconType: event.event_type
+      }));
+
+      const allActivities = [...taskActivities, ...observationActivities, ...phenologyActivities]
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       setActivities(allActivities);
@@ -120,8 +134,35 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ className }) => {
     fetchActivities();
   };
 
+  const handleDeleteActivity = async (activityId: string, activityType: string) => {
+    try {
+      if (activityType === 'task') {
+        await deleteTask(activityId);
+      } else if (activityType === 'phase') {
+        await deletePhenologyEvent(activityId);
+      } else if (activityType === 'note') {
+        await deleteObservation(activityId);
+      }
+      
+      toast({
+        title: "Deleted",
+        description: "Activity has been deleted successfully."
+      });
+      
+      fetchActivities();
+    } catch (error: any) {
+      console.error('Error deleting activity:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete activity. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const filteredActivities = activities.filter(activity => {
     if (activity.type === 'task') return filters.task;
+    if (activity.type === 'phase') return filters.phenology;
     if (activity.type === 'note') {
       const iconType = activity.iconType as keyof typeof filters;
       return filters[iconType] !== undefined ? filters[iconType] : filters.general;
@@ -211,6 +252,12 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ className }) => {
                   Tasks
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
+                  checked={filters.phenology}
+                  onCheckedChange={() => toggleFilter('phenology')}
+                >
+                  Phenology Events
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
                   checked={filters.observation}
                   onCheckedChange={() => toggleFilter('observation')}
                 >
@@ -252,7 +299,11 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ className }) => {
               </div>
             ) : (
               filteredActivities.map((activity) => (
-                <ActivityItem key={activity.id} activity={activity} />
+                <ActivityItem 
+                  key={activity.id} 
+                  activity={activity} 
+                  onDelete={handleDeleteActivity}
+                />
               ))
             )}
           </div>
